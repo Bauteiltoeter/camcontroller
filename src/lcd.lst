@@ -1,0 +1,1638 @@
+   1               		.file	"lcd.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  11               	toggle_e:
+  12               	.LFB7:
+  13               		.file 1 "src/lcd.c"
+   1:src/lcd.c     **** /****************************************************************************
+   2:src/lcd.c     ****  Title:     HD44780U LCD library
+   3:src/lcd.c     ****  Author:    Peter Fleury <pfleury@gmx.ch>  http://tinyurl.com/peterfleury
+   4:src/lcd.c     ****  File:	    $Id: lcd.c,v 1.15.2.2 2015/01/17 12:16:05 peter Exp $
+   5:src/lcd.c     ****  Software:  AVR-GCC 3.3 
+   6:src/lcd.c     ****  Target:    any AVR device, memory mapped mode only for AT90S4414/8515/Mega
+   7:src/lcd.c     **** 
+   8:src/lcd.c     ****  DESCRIPTION
+   9:src/lcd.c     ****        Basic routines for interfacing a HD44780U-based text lcd display
+  10:src/lcd.c     **** 
+  11:src/lcd.c     ****        Originally based on Volker Oth's lcd library,
+  12:src/lcd.c     ****        changed lcd_init(), added additional constants for lcd_command(),
+  13:src/lcd.c     ****        added 4-bit I/O mode, improved and optimized code.
+  14:src/lcd.c     **** 
+  15:src/lcd.c     ****        Library can be operated in memory mapped mode (LCD_IO_MODE=0) or in 
+  16:src/lcd.c     ****        4-bit IO port mode (LCD_IO_MODE=1). 8-bit IO port mode not supported.
+  17:src/lcd.c     ****        
+  18:src/lcd.c     ****        Memory mapped mode compatible with Kanda STK200, but supports also
+  19:src/lcd.c     ****        generation of R/W signal through A8 address line.
+  20:src/lcd.c     **** 
+  21:src/lcd.c     ****  USAGE
+  22:src/lcd.c     ****        See the C include lcd.h file for a description of each function
+  23:src/lcd.c     ****        
+  24:src/lcd.c     **** *****************************************************************************/
+  25:src/lcd.c     **** #include <inttypes.h>
+  26:src/lcd.c     **** #include <avr/io.h>
+  27:src/lcd.c     **** #include <avr/pgmspace.h>
+  28:src/lcd.c     **** #include <util/delay.h>
+  29:src/lcd.c     **** #include "lcd.h"
+  30:src/lcd.c     **** 
+  31:src/lcd.c     **** 
+  32:src/lcd.c     **** 
+  33:src/lcd.c     **** /* 
+  34:src/lcd.c     **** ** constants/macros 
+  35:src/lcd.c     **** */
+  36:src/lcd.c     **** #define DDR(x) (*(&x - 1))      /* address of data direction register of port x */
+  37:src/lcd.c     **** #if defined(__AVR_ATmega64__) || defined(__AVR_ATmega128__)
+  38:src/lcd.c     ****     /* on ATmega64/128 PINF is on port 0x00 and not 0x60 */
+  39:src/lcd.c     ****     #define PIN(x) ( &PORTF==&(x) ? _SFR_IO8(0x00) : (*(&x - 2)) )
+  40:src/lcd.c     **** #else
+  41:src/lcd.c     **** 	#define PIN(x) (*(&x - 2))    /* address of input register of port x          */
+  42:src/lcd.c     **** #endif
+  43:src/lcd.c     **** 
+  44:src/lcd.c     **** 
+  45:src/lcd.c     **** #if LCD_IO_MODE
+  46:src/lcd.c     **** #define lcd_e_delay()   _delay_us(LCD_DELAY_ENABLE_PULSE)
+  47:src/lcd.c     **** #define lcd_e_high()    LCD_E_PORT  |=  _BV(LCD_E_PIN);
+  48:src/lcd.c     **** #define lcd_e_low()     LCD_E_PORT  &= ~_BV(LCD_E_PIN);
+  49:src/lcd.c     **** #define lcd_e_toggle()  toggle_e()
+  50:src/lcd.c     **** #define lcd_rw_high()   LCD_RW_PORT |=  _BV(LCD_RW_PIN)
+  51:src/lcd.c     **** #define lcd_rw_low()    LCD_RW_PORT &= ~_BV(LCD_RW_PIN)
+  52:src/lcd.c     **** #define lcd_rs_high()   LCD_RS_PORT |=  _BV(LCD_RS_PIN)
+  53:src/lcd.c     **** #define lcd_rs_low()    LCD_RS_PORT &= ~_BV(LCD_RS_PIN)
+  54:src/lcd.c     **** #endif
+  55:src/lcd.c     **** 
+  56:src/lcd.c     **** #if LCD_IO_MODE
+  57:src/lcd.c     **** #if LCD_LINES==1
+  58:src/lcd.c     **** #define LCD_FUNCTION_DEFAULT    LCD_FUNCTION_4BIT_1LINE 
+  59:src/lcd.c     **** #else
+  60:src/lcd.c     **** #define LCD_FUNCTION_DEFAULT    LCD_FUNCTION_4BIT_2LINES 
+  61:src/lcd.c     **** #endif
+  62:src/lcd.c     **** #else
+  63:src/lcd.c     **** #if LCD_LINES==1
+  64:src/lcd.c     **** #define LCD_FUNCTION_DEFAULT    LCD_FUNCTION_8BIT_1LINE
+  65:src/lcd.c     **** #else
+  66:src/lcd.c     **** #define LCD_FUNCTION_DEFAULT    LCD_FUNCTION_8BIT_2LINES
+  67:src/lcd.c     **** #endif
+  68:src/lcd.c     **** #endif
+  69:src/lcd.c     **** 
+  70:src/lcd.c     **** #if LCD_CONTROLLER_KS0073
+  71:src/lcd.c     **** #if LCD_LINES==4
+  72:src/lcd.c     **** 
+  73:src/lcd.c     **** #define KS0073_EXTENDED_FUNCTION_REGISTER_ON  0x2C   /* |0|010|1100 4-bit mode, extension-bit RE = 
+  74:src/lcd.c     **** #define KS0073_EXTENDED_FUNCTION_REGISTER_OFF 0x28   /* |0|010|1000 4-bit mode, extension-bit RE = 
+  75:src/lcd.c     **** #define KS0073_4LINES_MODE                    0x09   /* |0|000|1001 4 lines mode */
+  76:src/lcd.c     **** 
+  77:src/lcd.c     **** #endif
+  78:src/lcd.c     **** #endif
+  79:src/lcd.c     **** 
+  80:src/lcd.c     **** /* 
+  81:src/lcd.c     **** ** function prototypes 
+  82:src/lcd.c     **** */
+  83:src/lcd.c     **** #if LCD_IO_MODE
+  84:src/lcd.c     **** static void toggle_e(void);
+  85:src/lcd.c     **** #endif
+  86:src/lcd.c     **** 
+  87:src/lcd.c     **** /*
+  88:src/lcd.c     **** ** local functions
+  89:src/lcd.c     **** */
+  90:src/lcd.c     **** 
+  91:src/lcd.c     **** 
+  92:src/lcd.c     **** /************************************************************************* 
+  93:src/lcd.c     **** delay for a minimum of <us> microseconds
+  94:src/lcd.c     **** the number of loops is calculated at compile-time from MCU clock frequency
+  95:src/lcd.c     **** *************************************************************************/
+  96:src/lcd.c     **** #define delay(us)  _delay_us(us) 
+  97:src/lcd.c     **** 
+  98:src/lcd.c     **** 
+  99:src/lcd.c     **** #if LCD_IO_MODE
+ 100:src/lcd.c     **** /* toggle Enable Pin to initiate write */
+ 101:src/lcd.c     **** static void toggle_e(void)
+ 102:src/lcd.c     **** {
+  14               		.loc 1 102 0
+  15               		.cfi_startproc
+  16               	/* prologue: function */
+  17               	/* frame size = 0 */
+  18               	/* stack size = 0 */
+  19               	.L__stack_usage = 0
+ 103:src/lcd.c     ****     lcd_e_high();
+  20               		.loc 1 103 0
+  21 0000 299A      		sbi 0x5,1
+  22               	.LVL0:
+  23               	.LBB28:
+  24               	.LBB29:
+  25               		.file 2 "/usr/lib/avr/include/util/delay.h"
+   1:/usr/lib/avr/include/util/delay.h **** /* Copyright (c) 2002, Marek Michalkiewicz
+   2:/usr/lib/avr/include/util/delay.h ****    Copyright (c) 2004,2005,2007 Joerg Wunsch
+   3:/usr/lib/avr/include/util/delay.h ****    Copyright (c) 2007  Florin-Viorel Petrov
+   4:/usr/lib/avr/include/util/delay.h ****    All rights reserved.
+   5:/usr/lib/avr/include/util/delay.h **** 
+   6:/usr/lib/avr/include/util/delay.h ****    Redistribution and use in source and binary forms, with or without
+   7:/usr/lib/avr/include/util/delay.h ****    modification, are permitted provided that the following conditions are met:
+   8:/usr/lib/avr/include/util/delay.h **** 
+   9:/usr/lib/avr/include/util/delay.h ****    * Redistributions of source code must retain the above copyright
+  10:/usr/lib/avr/include/util/delay.h ****      notice, this list of conditions and the following disclaimer.
+  11:/usr/lib/avr/include/util/delay.h **** 
+  12:/usr/lib/avr/include/util/delay.h ****    * Redistributions in binary form must reproduce the above copyright
+  13:/usr/lib/avr/include/util/delay.h ****      notice, this list of conditions and the following disclaimer in
+  14:/usr/lib/avr/include/util/delay.h ****      the documentation and/or other materials provided with the
+  15:/usr/lib/avr/include/util/delay.h ****      distribution.
+  16:/usr/lib/avr/include/util/delay.h **** 
+  17:/usr/lib/avr/include/util/delay.h ****    * Neither the name of the copyright holders nor the names of
+  18:/usr/lib/avr/include/util/delay.h ****      contributors may be used to endorse or promote products derived
+  19:/usr/lib/avr/include/util/delay.h ****      from this software without specific prior written permission.
+  20:/usr/lib/avr/include/util/delay.h **** 
+  21:/usr/lib/avr/include/util/delay.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:/usr/lib/avr/include/util/delay.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:/usr/lib/avr/include/util/delay.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:/usr/lib/avr/include/util/delay.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  25:/usr/lib/avr/include/util/delay.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:/usr/lib/avr/include/util/delay.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:/usr/lib/avr/include/util/delay.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:/usr/lib/avr/include/util/delay.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:/usr/lib/avr/include/util/delay.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:/usr/lib/avr/include/util/delay.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:/usr/lib/avr/include/util/delay.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  32:/usr/lib/avr/include/util/delay.h **** 
+  33:/usr/lib/avr/include/util/delay.h **** /* $Id$ */
+  34:/usr/lib/avr/include/util/delay.h **** 
+  35:/usr/lib/avr/include/util/delay.h **** #ifndef _UTIL_DELAY_H_
+  36:/usr/lib/avr/include/util/delay.h **** #define _UTIL_DELAY_H_ 1
+  37:/usr/lib/avr/include/util/delay.h **** 
+  38:/usr/lib/avr/include/util/delay.h **** #ifndef __HAS_DELAY_CYCLES
+  39:/usr/lib/avr/include/util/delay.h **** #define __HAS_DELAY_CYCLES 1
+  40:/usr/lib/avr/include/util/delay.h **** #endif
+  41:/usr/lib/avr/include/util/delay.h **** 
+  42:/usr/lib/avr/include/util/delay.h **** #include <inttypes.h>
+  43:/usr/lib/avr/include/util/delay.h **** #include <util/delay_basic.h>
+  44:/usr/lib/avr/include/util/delay.h **** #include <math.h>
+  45:/usr/lib/avr/include/util/delay.h **** 
+  46:/usr/lib/avr/include/util/delay.h **** /** \file */
+  47:/usr/lib/avr/include/util/delay.h **** /** \defgroup util_delay <util/delay.h>: Convenience functions for busy-wait delay loops
+  48:/usr/lib/avr/include/util/delay.h ****     \code
+  49:/usr/lib/avr/include/util/delay.h ****     #define F_CPU 1000000UL  // 1 MHz
+  50:/usr/lib/avr/include/util/delay.h ****     //#define F_CPU 14.7456E6
+  51:/usr/lib/avr/include/util/delay.h ****     #include <util/delay.h>
+  52:/usr/lib/avr/include/util/delay.h ****     \endcode
+  53:/usr/lib/avr/include/util/delay.h **** 
+  54:/usr/lib/avr/include/util/delay.h ****     \note As an alternative method, it is possible to pass the
+  55:/usr/lib/avr/include/util/delay.h ****     F_CPU macro down to the compiler from the Makefile.
+  56:/usr/lib/avr/include/util/delay.h ****     Obviously, in that case, no \c \#define statement should be
+  57:/usr/lib/avr/include/util/delay.h ****     used.
+  58:/usr/lib/avr/include/util/delay.h **** 
+  59:/usr/lib/avr/include/util/delay.h ****     The functions in this header file are wrappers around the basic
+  60:/usr/lib/avr/include/util/delay.h ****     busy-wait functions from <util/delay_basic.h>.  They are meant as
+  61:/usr/lib/avr/include/util/delay.h ****     convenience functions where actual time values can be specified
+  62:/usr/lib/avr/include/util/delay.h ****     rather than a number of cycles to wait for.  The idea behind is
+  63:/usr/lib/avr/include/util/delay.h ****     that compile-time constant expressions will be eliminated by
+  64:/usr/lib/avr/include/util/delay.h ****     compiler optimization so floating-point expressions can be used
+  65:/usr/lib/avr/include/util/delay.h ****     to calculate the number of delay cycles needed based on the CPU
+  66:/usr/lib/avr/include/util/delay.h ****     frequency passed by the macro F_CPU.
+  67:/usr/lib/avr/include/util/delay.h **** 
+  68:/usr/lib/avr/include/util/delay.h ****     \note In order for these functions to work as intended, compiler
+  69:/usr/lib/avr/include/util/delay.h ****     optimizations <em>must</em> be enabled, and the delay time
+  70:/usr/lib/avr/include/util/delay.h ****     <em>must</em> be an expression that is a known constant at
+  71:/usr/lib/avr/include/util/delay.h ****     compile-time.  If these requirements are not met, the resulting
+  72:/usr/lib/avr/include/util/delay.h ****     delay will be much longer (and basically unpredictable), and
+  73:/usr/lib/avr/include/util/delay.h ****     applications that otherwise do not use floating-point calculations
+  74:/usr/lib/avr/include/util/delay.h ****     will experience severe code bloat by the floating-point library
+  75:/usr/lib/avr/include/util/delay.h ****     routines linked into the application.
+  76:/usr/lib/avr/include/util/delay.h **** 
+  77:/usr/lib/avr/include/util/delay.h ****     The functions available allow the specification of microsecond, and
+  78:/usr/lib/avr/include/util/delay.h ****     millisecond delays directly, using the application-supplied macro
+  79:/usr/lib/avr/include/util/delay.h ****     F_CPU as the CPU clock frequency (in Hertz).
+  80:/usr/lib/avr/include/util/delay.h **** 
+  81:/usr/lib/avr/include/util/delay.h **** */
+  82:/usr/lib/avr/include/util/delay.h **** 
+  83:/usr/lib/avr/include/util/delay.h **** #if !defined(__DOXYGEN__)
+  84:/usr/lib/avr/include/util/delay.h **** static inline void _delay_us(double __us) __attribute__((always_inline));
+  85:/usr/lib/avr/include/util/delay.h **** static inline void _delay_ms(double __ms) __attribute__((always_inline));
+  86:/usr/lib/avr/include/util/delay.h **** #endif
+  87:/usr/lib/avr/include/util/delay.h **** 
+  88:/usr/lib/avr/include/util/delay.h **** #ifndef F_CPU
+  89:/usr/lib/avr/include/util/delay.h **** /* prevent compiler error by supplying a default */
+  90:/usr/lib/avr/include/util/delay.h **** # warning "F_CPU not defined for <util/delay.h>"
+  91:/usr/lib/avr/include/util/delay.h **** # define F_CPU 1000000UL
+  92:/usr/lib/avr/include/util/delay.h **** #endif
+  93:/usr/lib/avr/include/util/delay.h **** 
+  94:/usr/lib/avr/include/util/delay.h **** #ifndef __OPTIMIZE__
+  95:/usr/lib/avr/include/util/delay.h **** # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+  96:/usr/lib/avr/include/util/delay.h **** #endif
+  97:/usr/lib/avr/include/util/delay.h **** 
+  98:/usr/lib/avr/include/util/delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+  99:/usr/lib/avr/include/util/delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 100:/usr/lib/avr/include/util/delay.h ****   __STDC_HOSTED__
+ 101:/usr/lib/avr/include/util/delay.h **** #  include <math.h>
+ 102:/usr/lib/avr/include/util/delay.h **** #endif
+ 103:/usr/lib/avr/include/util/delay.h **** 
+ 104:/usr/lib/avr/include/util/delay.h **** /**
+ 105:/usr/lib/avr/include/util/delay.h ****    \ingroup util_delay
+ 106:/usr/lib/avr/include/util/delay.h **** 
+ 107:/usr/lib/avr/include/util/delay.h ****    Perform a delay of \c __ms milliseconds, using _delay_loop_2().
+ 108:/usr/lib/avr/include/util/delay.h **** 
+ 109:/usr/lib/avr/include/util/delay.h ****    The macro F_CPU is supposed to be defined to a
+ 110:/usr/lib/avr/include/util/delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 111:/usr/lib/avr/include/util/delay.h **** 
+ 112:/usr/lib/avr/include/util/delay.h ****    The maximal possible delay is 262.14 ms / F_CPU in MHz.
+ 113:/usr/lib/avr/include/util/delay.h **** 
+ 114:/usr/lib/avr/include/util/delay.h ****    When the user request delay which exceed the maximum possible one,
+ 115:/usr/lib/avr/include/util/delay.h ****    _delay_ms() provides a decreased resolution functionality. In this
+ 116:/usr/lib/avr/include/util/delay.h ****    mode _delay_ms() will work with a resolution of 1/10 ms, providing
+ 117:/usr/lib/avr/include/util/delay.h ****    delays up to 6.5535 seconds (independent from CPU frequency).  The
+ 118:/usr/lib/avr/include/util/delay.h ****    user will not be informed about decreased resolution.
+ 119:/usr/lib/avr/include/util/delay.h **** 
+ 120:/usr/lib/avr/include/util/delay.h ****    If the avr-gcc toolchain has __builtin_avr_delay_cycles(unsigned long)
+ 121:/usr/lib/avr/include/util/delay.h ****    support, maximal possible delay is 4294967.295 ms/ F_CPU in MHz. For
+ 122:/usr/lib/avr/include/util/delay.h ****    values greater than the maximal possible delay, overflows results in
+ 123:/usr/lib/avr/include/util/delay.h ****    no delay i.e., 0ms.
+ 124:/usr/lib/avr/include/util/delay.h **** 
+ 125:/usr/lib/avr/include/util/delay.h ****    Conversion of __us into clock cycles may not always result in integer.
+ 126:/usr/lib/avr/include/util/delay.h ****    By default, the clock cycles rounded up to next integer. This ensures that
+ 127:/usr/lib/avr/include/util/delay.h ****    the user gets atleast __us microseconds of delay.
+ 128:/usr/lib/avr/include/util/delay.h **** 
+ 129:/usr/lib/avr/include/util/delay.h ****    Alternatively, user can define __DELAY_ROUND_DOWN__ and __DELAY_ROUND_CLOSEST__
+ 130:/usr/lib/avr/include/util/delay.h ****    to round down and round to closest integer.
+ 131:/usr/lib/avr/include/util/delay.h **** 
+ 132:/usr/lib/avr/include/util/delay.h ****    Note: The new implementation of _delay_ms(double __ms) with 
+ 133:/usr/lib/avr/include/util/delay.h ****     __builtin_avr_delay_cycles(unsigned long) support is not backward compatible. 
+ 134:/usr/lib/avr/include/util/delay.h ****    User can define __DELAY_BACKWARD_COMPATIBLE__ to get a backward compatible delay.
+ 135:/usr/lib/avr/include/util/delay.h ****    Also, the backward compatible
+ 136:/usr/lib/avr/include/util/delay.h ****    algorithm will be chosen if the code is compiled in a <em>freestanding
+ 137:/usr/lib/avr/include/util/delay.h ****    environment</em> (GCC option \c -ffreestanding), as the math functions
+ 138:/usr/lib/avr/include/util/delay.h ****    required for rounding are not available to the compiler then.
+ 139:/usr/lib/avr/include/util/delay.h **** 
+ 140:/usr/lib/avr/include/util/delay.h ****  */
+ 141:/usr/lib/avr/include/util/delay.h **** void
+ 142:/usr/lib/avr/include/util/delay.h **** _delay_ms(double __ms)
+ 143:/usr/lib/avr/include/util/delay.h **** {
+ 144:/usr/lib/avr/include/util/delay.h **** 	double __tmp ; 
+ 145:/usr/lib/avr/include/util/delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 146:/usr/lib/avr/include/util/delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 147:/usr/lib/avr/include/util/delay.h ****   __STDC_HOSTED__
+ 148:/usr/lib/avr/include/util/delay.h **** 	uint32_t __ticks_dc;
+ 149:/usr/lib/avr/include/util/delay.h **** 	extern void __builtin_avr_delay_cycles(unsigned long);
+ 150:/usr/lib/avr/include/util/delay.h **** 	__tmp = ((F_CPU) / 1e3) * __ms;
+ 151:/usr/lib/avr/include/util/delay.h **** 
+ 152:/usr/lib/avr/include/util/delay.h **** 	#if defined(__DELAY_ROUND_DOWN__)
+ 153:/usr/lib/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)fabs(__tmp);
+ 154:/usr/lib/avr/include/util/delay.h **** 
+ 155:/usr/lib/avr/include/util/delay.h **** 	#elif defined(__DELAY_ROUND_CLOSEST__)
+ 156:/usr/lib/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)(fabs(__tmp)+0.5);
+ 157:/usr/lib/avr/include/util/delay.h **** 
+ 158:/usr/lib/avr/include/util/delay.h **** 	#else
+ 159:/usr/lib/avr/include/util/delay.h **** 		//round up by default
+ 160:/usr/lib/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+ 161:/usr/lib/avr/include/util/delay.h **** 	#endif
+ 162:/usr/lib/avr/include/util/delay.h **** 
+ 163:/usr/lib/avr/include/util/delay.h **** 	__builtin_avr_delay_cycles(__ticks_dc);
+ 164:/usr/lib/avr/include/util/delay.h **** 
+ 165:/usr/lib/avr/include/util/delay.h **** #else
+ 166:/usr/lib/avr/include/util/delay.h **** 	uint16_t __ticks;
+ 167:/usr/lib/avr/include/util/delay.h **** 	__tmp = ((F_CPU) / 4e3) * __ms;
+ 168:/usr/lib/avr/include/util/delay.h **** 	if (__tmp < 1.0)
+ 169:/usr/lib/avr/include/util/delay.h **** 		__ticks = 1;
+ 170:/usr/lib/avr/include/util/delay.h **** 	else if (__tmp > 65535)
+ 171:/usr/lib/avr/include/util/delay.h **** 	{
+ 172:/usr/lib/avr/include/util/delay.h **** 		//	__ticks = requested delay in 1/10 ms
+ 173:/usr/lib/avr/include/util/delay.h **** 		__ticks = (uint16_t) (__ms * 10.0);
+ 174:/usr/lib/avr/include/util/delay.h **** 		while(__ticks)
+ 175:/usr/lib/avr/include/util/delay.h **** 		{
+ 176:/usr/lib/avr/include/util/delay.h **** 			// wait 1/10 ms
+ 177:/usr/lib/avr/include/util/delay.h **** 			_delay_loop_2(((F_CPU) / 4e3) / 10);
+ 178:/usr/lib/avr/include/util/delay.h **** 			__ticks --;
+ 179:/usr/lib/avr/include/util/delay.h **** 		}
+ 180:/usr/lib/avr/include/util/delay.h **** 		return;
+ 181:/usr/lib/avr/include/util/delay.h **** 	}
+ 182:/usr/lib/avr/include/util/delay.h **** 	else
+ 183:/usr/lib/avr/include/util/delay.h **** 		__ticks = (uint16_t)__tmp;
+ 184:/usr/lib/avr/include/util/delay.h **** 	_delay_loop_2(__ticks);
+ 185:/usr/lib/avr/include/util/delay.h **** #endif
+ 186:/usr/lib/avr/include/util/delay.h **** }
+ 187:/usr/lib/avr/include/util/delay.h **** 
+ 188:/usr/lib/avr/include/util/delay.h **** /**
+ 189:/usr/lib/avr/include/util/delay.h ****    \ingroup util_delay
+ 190:/usr/lib/avr/include/util/delay.h **** 
+ 191:/usr/lib/avr/include/util/delay.h ****    Perform a delay of \c __us microseconds, using _delay_loop_1().
+ 192:/usr/lib/avr/include/util/delay.h **** 
+ 193:/usr/lib/avr/include/util/delay.h ****    The macro F_CPU is supposed to be defined to a
+ 194:/usr/lib/avr/include/util/delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 195:/usr/lib/avr/include/util/delay.h **** 
+ 196:/usr/lib/avr/include/util/delay.h ****    The maximal possible delay is 768 us / F_CPU in MHz.
+ 197:/usr/lib/avr/include/util/delay.h **** 
+ 198:/usr/lib/avr/include/util/delay.h ****    If the user requests a delay greater than the maximal possible one,
+ 199:/usr/lib/avr/include/util/delay.h ****    _delay_us() will automatically call _delay_ms() instead.  The user
+ 200:/usr/lib/avr/include/util/delay.h ****    will not be informed about this case.
+ 201:/usr/lib/avr/include/util/delay.h **** 
+ 202:/usr/lib/avr/include/util/delay.h ****    If the avr-gcc toolchain has __builtin_avr_delay_cycles(unsigned long)
+ 203:/usr/lib/avr/include/util/delay.h ****    support, maximal possible delay is 4294967.295 us/ F_CPU in MHz. For
+ 204:/usr/lib/avr/include/util/delay.h ****    values greater than the maximal possible delay, overflow results in
+ 205:/usr/lib/avr/include/util/delay.h ****    no delay i.e., 0us.
+ 206:/usr/lib/avr/include/util/delay.h ****   
+ 207:/usr/lib/avr/include/util/delay.h ****    Conversion of __us into clock cycles may not always result in integer.
+ 208:/usr/lib/avr/include/util/delay.h ****    By default, the clock cycles rounded up to next integer. This ensures that
+ 209:/usr/lib/avr/include/util/delay.h ****    the user gets atleast __us microseconds of delay.
+ 210:/usr/lib/avr/include/util/delay.h **** 
+ 211:/usr/lib/avr/include/util/delay.h ****    Alternatively, user can define __DELAY_ROUND_DOWN__ and __DELAY_ROUND_CLOSEST__
+ 212:/usr/lib/avr/include/util/delay.h ****    to round down and round to closest integer.
+ 213:/usr/lib/avr/include/util/delay.h ****  
+ 214:/usr/lib/avr/include/util/delay.h ****    Note: The new implementation of _delay_us(double __us) with 
+ 215:/usr/lib/avr/include/util/delay.h ****     __builtin_avr_delay_cycles(unsigned long) support is not backward compatible.
+ 216:/usr/lib/avr/include/util/delay.h ****    User can define __DELAY_BACKWARD_COMPATIBLE__ to get a backward compatible delay.
+ 217:/usr/lib/avr/include/util/delay.h ****    Also, the backward compatible
+ 218:/usr/lib/avr/include/util/delay.h ****    algorithm will be chosen if the code is compiled in a <em>freestanding
+ 219:/usr/lib/avr/include/util/delay.h ****    environment</em> (GCC option \c -ffreestanding), as the math functions
+ 220:/usr/lib/avr/include/util/delay.h ****    required for rounding are not available to the compiler then.
+ 221:/usr/lib/avr/include/util/delay.h **** 
+ 222:/usr/lib/avr/include/util/delay.h ****  */
+ 223:/usr/lib/avr/include/util/delay.h **** void
+ 224:/usr/lib/avr/include/util/delay.h **** _delay_us(double __us)
+ 225:/usr/lib/avr/include/util/delay.h **** {
+ 226:/usr/lib/avr/include/util/delay.h **** 	double __tmp ; 
+ 227:/usr/lib/avr/include/util/delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 228:/usr/lib/avr/include/util/delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 229:/usr/lib/avr/include/util/delay.h ****   __STDC_HOSTED__
+ 230:/usr/lib/avr/include/util/delay.h **** 	uint32_t __ticks_dc;
+ 231:/usr/lib/avr/include/util/delay.h **** 	extern void __builtin_avr_delay_cycles(unsigned long);
+ 232:/usr/lib/avr/include/util/delay.h **** 	__tmp = ((F_CPU) / 1e6) * __us;
+ 233:/usr/lib/avr/include/util/delay.h **** 
+ 234:/usr/lib/avr/include/util/delay.h **** 	#if defined(__DELAY_ROUND_DOWN__)
+ 235:/usr/lib/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)fabs(__tmp);
+ 236:/usr/lib/avr/include/util/delay.h **** 
+ 237:/usr/lib/avr/include/util/delay.h **** 	#elif defined(__DELAY_ROUND_CLOSEST__)
+ 238:/usr/lib/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)(fabs(__tmp)+0.5);
+ 239:/usr/lib/avr/include/util/delay.h **** 
+ 240:/usr/lib/avr/include/util/delay.h **** 	#else
+ 241:/usr/lib/avr/include/util/delay.h **** 		//round up by default
+ 242:/usr/lib/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+ 243:/usr/lib/avr/include/util/delay.h **** 	#endif
+ 244:/usr/lib/avr/include/util/delay.h **** 
+ 245:/usr/lib/avr/include/util/delay.h **** 	__builtin_avr_delay_cycles(__ticks_dc);
+  26               		.loc 2 245 0
+  27 0002 85E0      		ldi r24,lo8(5)
+  28 0004 8A95      	1:	dec r24
+  29 0006 01F4      		brne 1b
+  30 0008 0000      		nop
+  31               	.LBE29:
+  32               	.LBE28:
+ 104:src/lcd.c     ****     lcd_e_delay();
+ 105:src/lcd.c     ****     lcd_e_low();
+  33               		.loc 1 105 0
+  34 000a 2998      		cbi 0x5,1
+  35 000c 0895      		ret
+  36               		.cfi_endproc
+  37               	.LFE7:
+  40               	lcd_write:
+  41               	.LFB8:
+ 106:src/lcd.c     **** }
+ 107:src/lcd.c     **** #endif
+ 108:src/lcd.c     **** 
+ 109:src/lcd.c     **** 
+ 110:src/lcd.c     **** /*************************************************************************
+ 111:src/lcd.c     **** Low-level function to write byte to LCD controller
+ 112:src/lcd.c     **** Input:    data   byte to write to LCD
+ 113:src/lcd.c     ****           rs     1: write data    
+ 114:src/lcd.c     ****                  0: write instruction
+ 115:src/lcd.c     **** Returns:  none
+ 116:src/lcd.c     **** *************************************************************************/
+ 117:src/lcd.c     **** #if LCD_IO_MODE
+ 118:src/lcd.c     **** static void lcd_write(uint8_t data,uint8_t rs) 
+ 119:src/lcd.c     **** {
+  42               		.loc 1 119 0
+  43               		.cfi_startproc
+  44               	.LVL1:
+  45 000e CF93      		push r28
+  46               	.LCFI0:
+  47               		.cfi_def_cfa_offset 3
+  48               		.cfi_offset 28, -2
+  49 0010 DF93      		push r29
+  50               	.LCFI1:
+  51               		.cfi_def_cfa_offset 4
+  52               		.cfi_offset 29, -3
+  53 0012 1F92      		push __zero_reg__
+  54               	.LCFI2:
+  55               		.cfi_def_cfa_offset 5
+  56 0014 CDB7      		in r28,__SP_L__
+  57 0016 DEB7      		in r29,__SP_H__
+  58               	.LCFI3:
+  59               		.cfi_def_cfa_register 28
+  60               	/* prologue: function */
+  61               	/* frame size = 1 */
+  62               	/* stack size = 3 */
+  63               	.L__stack_usage = 3
+ 120:src/lcd.c     ****     unsigned char dataBits ;
+ 121:src/lcd.c     **** 
+ 122:src/lcd.c     **** 
+ 123:src/lcd.c     ****     if (rs) {        /* write data        (RS=1, RW=0) */
+  64               		.loc 1 123 0
+  65 0018 6623      		tst r22
+  66 001a 01F0      		breq .L3
+ 124:src/lcd.c     ****        lcd_rs_high();
+  67               		.loc 1 124 0
+  68 001c 289A      		sbi 0x5,0
+  69 001e 00C0      		rjmp .L4
+  70               	.L3:
+ 125:src/lcd.c     ****     } else {         /* write instruction (RS=0, RW=0) */
+ 126:src/lcd.c     ****        lcd_rs_low();
+  71               		.loc 1 126 0
+  72 0020 2898      		cbi 0x5,0
+  73               	.L4:
+ 127:src/lcd.c     ****     }
+ 128:src/lcd.c     ****     lcd_rw_low();    /* RW=0  write mode      */
+  74               		.loc 1 128 0
+  75 0022 2E98      		cbi 0x5,6
+ 129:src/lcd.c     **** 
+ 130:src/lcd.c     ****     if ( ( &LCD_DATA0_PORT == &LCD_DATA1_PORT) && ( &LCD_DATA1_PORT == &LCD_DATA2_PORT ) && ( &LCD_
+ 131:src/lcd.c     ****       && (LCD_DATA0_PIN == 0) && (LCD_DATA1_PIN == 1) && (LCD_DATA2_PIN == 2) && (LCD_DATA3_PIN == 
+ 132:src/lcd.c     ****     {
+ 133:src/lcd.c     ****         /* configure data pins as output */
+ 134:src/lcd.c     ****         DDR(LCD_DATA0_PORT) |= 0x0F;
+ 135:src/lcd.c     **** 
+ 136:src/lcd.c     ****         /* output high nibble first */
+ 137:src/lcd.c     ****         dataBits = LCD_DATA0_PORT & 0xF0;
+ 138:src/lcd.c     ****         LCD_DATA0_PORT = dataBits |((data>>4)&0x0F);
+ 139:src/lcd.c     ****         lcd_e_toggle();
+ 140:src/lcd.c     **** 
+ 141:src/lcd.c     ****         /* output low nibble */
+ 142:src/lcd.c     ****         LCD_DATA0_PORT = dataBits | (data&0x0F);
+ 143:src/lcd.c     ****         lcd_e_toggle();
+ 144:src/lcd.c     **** 
+ 145:src/lcd.c     ****         /* all data pins high (inactive) */
+ 146:src/lcd.c     ****         LCD_DATA0_PORT = dataBits | 0x0F;
+ 147:src/lcd.c     ****     }
+ 148:src/lcd.c     ****     else
+ 149:src/lcd.c     ****     {
+ 150:src/lcd.c     ****         /* configure data pins as output */
+ 151:src/lcd.c     ****         DDR(LCD_DATA0_PORT) |= _BV(LCD_DATA0_PIN);
+  76               		.loc 1 151 0
+  77 0024 229A      		sbi 0x4,2
+ 152:src/lcd.c     ****         DDR(LCD_DATA1_PORT) |= _BV(LCD_DATA1_PIN);
+  78               		.loc 1 152 0
+  79 0026 239A      		sbi 0x4,3
+ 153:src/lcd.c     ****         DDR(LCD_DATA2_PORT) |= _BV(LCD_DATA2_PIN);
+  80               		.loc 1 153 0
+  81 0028 249A      		sbi 0x4,4
+ 154:src/lcd.c     ****         DDR(LCD_DATA3_PORT) |= _BV(LCD_DATA3_PIN);
+  82               		.loc 1 154 0
+  83 002a 259A      		sbi 0x4,5
+ 155:src/lcd.c     ****         
+ 156:src/lcd.c     ****         /* output high nibble first */
+ 157:src/lcd.c     ****         LCD_DATA3_PORT &= ~_BV(LCD_DATA3_PIN);
+  84               		.loc 1 157 0
+  85 002c 2D98      		cbi 0x5,5
+ 158:src/lcd.c     ****         LCD_DATA2_PORT &= ~_BV(LCD_DATA2_PIN);
+  86               		.loc 1 158 0
+  87 002e 2C98      		cbi 0x5,4
+ 159:src/lcd.c     ****         LCD_DATA1_PORT &= ~_BV(LCD_DATA1_PIN);
+  88               		.loc 1 159 0
+  89 0030 2B98      		cbi 0x5,3
+ 160:src/lcd.c     ****         LCD_DATA0_PORT &= ~_BV(LCD_DATA0_PIN);
+  90               		.loc 1 160 0
+  91 0032 2A98      		cbi 0x5,2
+ 161:src/lcd.c     ****     	if(data & 0x80) LCD_DATA3_PORT |= _BV(LCD_DATA3_PIN);
+  92               		.loc 1 161 0
+  93 0034 87FD      		sbrc r24,7
+  94               		.loc 1 161 0 is_stmt 0 discriminator 1
+  95 0036 2D9A      		sbi 0x5,5
+  96               	.L5:
+ 162:src/lcd.c     ****     	if(data & 0x40) LCD_DATA2_PORT |= _BV(LCD_DATA2_PIN);
+  97               		.loc 1 162 0 is_stmt 1
+  98 0038 86FD      		sbrc r24,6
+  99               		.loc 1 162 0 is_stmt 0 discriminator 1
+ 100 003a 2C9A      		sbi 0x5,4
+ 101               	.L6:
+ 163:src/lcd.c     ****     	if(data & 0x20) LCD_DATA1_PORT |= _BV(LCD_DATA1_PIN);
+ 102               		.loc 1 163 0 is_stmt 1
+ 103 003c 85FD      		sbrc r24,5
+ 104               		.loc 1 163 0 is_stmt 0 discriminator 1
+ 105 003e 2B9A      		sbi 0x5,3
+ 106               	.L7:
+ 164:src/lcd.c     ****     	if(data & 0x10) LCD_DATA0_PORT |= _BV(LCD_DATA0_PIN);   
+ 107               		.loc 1 164 0 is_stmt 1
+ 108 0040 84FD      		sbrc r24,4
+ 109               		.loc 1 164 0 is_stmt 0 discriminator 1
+ 110 0042 2A9A      		sbi 0x5,2
+ 111               	.L8:
+ 165:src/lcd.c     ****         lcd_e_toggle();
+ 112               		.loc 1 165 0 is_stmt 1
+ 113 0044 8983      		std Y+1,r24
+ 114 0046 0E94 0000 		call toggle_e
+ 115               	.LVL2:
+ 166:src/lcd.c     ****         
+ 167:src/lcd.c     ****         /* output low nibble */
+ 168:src/lcd.c     ****         LCD_DATA3_PORT &= ~_BV(LCD_DATA3_PIN);
+ 116               		.loc 1 168 0
+ 117 004a 2D98      		cbi 0x5,5
+ 169:src/lcd.c     ****         LCD_DATA2_PORT &= ~_BV(LCD_DATA2_PIN);
+ 118               		.loc 1 169 0
+ 119 004c 2C98      		cbi 0x5,4
+ 170:src/lcd.c     ****         LCD_DATA1_PORT &= ~_BV(LCD_DATA1_PIN);
+ 120               		.loc 1 170 0
+ 121 004e 2B98      		cbi 0x5,3
+ 171:src/lcd.c     ****         LCD_DATA0_PORT &= ~_BV(LCD_DATA0_PIN);
+ 122               		.loc 1 171 0
+ 123 0050 2A98      		cbi 0x5,2
+ 172:src/lcd.c     ****     	if(data & 0x08) LCD_DATA3_PORT |= _BV(LCD_DATA3_PIN);
+ 124               		.loc 1 172 0
+ 125 0052 8981      		ldd r24,Y+1
+ 126 0054 83FD      		sbrc r24,3
+ 127               		.loc 1 172 0 is_stmt 0 discriminator 1
+ 128 0056 2D9A      		sbi 0x5,5
+ 129               	.L9:
+ 173:src/lcd.c     ****     	if(data & 0x04) LCD_DATA2_PORT |= _BV(LCD_DATA2_PIN);
+ 130               		.loc 1 173 0 is_stmt 1
+ 131 0058 82FD      		sbrc r24,2
+ 132               		.loc 1 173 0 is_stmt 0 discriminator 1
+ 133 005a 2C9A      		sbi 0x5,4
+ 134               	.L10:
+ 174:src/lcd.c     ****     	if(data & 0x02) LCD_DATA1_PORT |= _BV(LCD_DATA1_PIN);
+ 135               		.loc 1 174 0 is_stmt 1
+ 136 005c 81FD      		sbrc r24,1
+ 137               		.loc 1 174 0 is_stmt 0 discriminator 1
+ 138 005e 2B9A      		sbi 0x5,3
+ 139               	.L11:
+ 175:src/lcd.c     ****     	if(data & 0x01) LCD_DATA0_PORT |= _BV(LCD_DATA0_PIN);
+ 140               		.loc 1 175 0 is_stmt 1
+ 141 0060 80FD      		sbrc r24,0
+ 142               		.loc 1 175 0 is_stmt 0 discriminator 1
+ 143 0062 2A9A      		sbi 0x5,2
+ 144               	.L12:
+ 176:src/lcd.c     ****         lcd_e_toggle();        
+ 145               		.loc 1 176 0 is_stmt 1
+ 146 0064 0E94 0000 		call toggle_e
+ 147               	.LVL3:
+ 177:src/lcd.c     ****         
+ 178:src/lcd.c     ****         /* all data pins high (inactive) */
+ 179:src/lcd.c     ****         LCD_DATA0_PORT |= _BV(LCD_DATA0_PIN);
+ 148               		.loc 1 179 0
+ 149 0068 2A9A      		sbi 0x5,2
+ 180:src/lcd.c     ****         LCD_DATA1_PORT |= _BV(LCD_DATA1_PIN);
+ 150               		.loc 1 180 0
+ 151 006a 2B9A      		sbi 0x5,3
+ 181:src/lcd.c     ****         LCD_DATA2_PORT |= _BV(LCD_DATA2_PIN);
+ 152               		.loc 1 181 0
+ 153 006c 2C9A      		sbi 0x5,4
+ 182:src/lcd.c     ****         LCD_DATA3_PORT |= _BV(LCD_DATA3_PIN);
+ 154               		.loc 1 182 0
+ 155 006e 2D9A      		sbi 0x5,5
+ 156               	/* epilogue start */
+ 183:src/lcd.c     ****     }
+ 184:src/lcd.c     **** }
+ 157               		.loc 1 184 0
+ 158 0070 0F90      		pop __tmp_reg__
+ 159 0072 DF91      		pop r29
+ 160 0074 CF91      		pop r28
+ 161 0076 0895      		ret
+ 162               		.cfi_endproc
+ 163               	.LFE8:
+ 166               	lcd_read.constprop.0:
+ 167               	.LFB22:
+ 185:src/lcd.c     **** #else
+ 186:src/lcd.c     **** #define lcd_write(d,rs) if (rs) *(volatile uint8_t*)(LCD_IO_DATA) = d; else *(volatile uint8_t*)(LC
+ 187:src/lcd.c     **** /* rs==0 -> write instruction to LCD_IO_FUNCTION */
+ 188:src/lcd.c     **** /* rs==1 -> write data to LCD_IO_DATA */
+ 189:src/lcd.c     **** #endif
+ 190:src/lcd.c     **** 
+ 191:src/lcd.c     **** 
+ 192:src/lcd.c     **** /*************************************************************************
+ 193:src/lcd.c     **** Low-level function to read byte from LCD controller
+ 194:src/lcd.c     **** Input:    rs     1: read data    
+ 195:src/lcd.c     ****                  0: read busy flag / address counter
+ 196:src/lcd.c     **** Returns:  byte read from LCD controller
+ 197:src/lcd.c     **** *************************************************************************/
+ 198:src/lcd.c     **** #if LCD_IO_MODE
+ 199:src/lcd.c     **** static uint8_t lcd_read(uint8_t rs) 
+ 168               		.loc 1 199 0
+ 169               		.cfi_startproc
+ 170               	/* prologue: function */
+ 171               	/* frame size = 0 */
+ 172               	/* stack size = 0 */
+ 173               	.L__stack_usage = 0
+ 174               	.LVL4:
+ 200:src/lcd.c     **** {
+ 201:src/lcd.c     ****     uint8_t data;
+ 202:src/lcd.c     ****     
+ 203:src/lcd.c     ****     
+ 204:src/lcd.c     ****     if (rs)
+ 205:src/lcd.c     ****         lcd_rs_high();                       /* RS=1: read data      */
+ 206:src/lcd.c     ****     else
+ 207:src/lcd.c     ****         lcd_rs_low();                        /* RS=0: read busy flag */
+ 175               		.loc 1 207 0
+ 176 0078 2898      		cbi 0x5,0
+ 208:src/lcd.c     ****     lcd_rw_high();                           /* RW=1  read mode      */
+ 177               		.loc 1 208 0
+ 178 007a 2E9A      		sbi 0x5,6
+ 209:src/lcd.c     ****     
+ 210:src/lcd.c     ****     if ( ( &LCD_DATA0_PORT == &LCD_DATA1_PORT) && ( &LCD_DATA1_PORT == &LCD_DATA2_PORT ) && ( &LCD_
+ 211:src/lcd.c     ****       && ( LCD_DATA0_PIN == 0 )&& (LCD_DATA1_PIN == 1) && (LCD_DATA2_PIN == 2) && (LCD_DATA3_PIN ==
+ 212:src/lcd.c     ****     {
+ 213:src/lcd.c     ****         DDR(LCD_DATA0_PORT) &= 0xF0;         /* configure data pins as input */
+ 214:src/lcd.c     ****         
+ 215:src/lcd.c     ****         lcd_e_high();
+ 216:src/lcd.c     ****         lcd_e_delay();        
+ 217:src/lcd.c     ****         data = PIN(LCD_DATA0_PORT) << 4;     /* read high nibble first */
+ 218:src/lcd.c     ****         lcd_e_low();
+ 219:src/lcd.c     ****         
+ 220:src/lcd.c     ****         lcd_e_delay();                       /* Enable 500ns low       */
+ 221:src/lcd.c     ****         
+ 222:src/lcd.c     ****         lcd_e_high();
+ 223:src/lcd.c     ****         lcd_e_delay();
+ 224:src/lcd.c     ****         data |= PIN(LCD_DATA0_PORT)&0x0F;    /* read low nibble        */
+ 225:src/lcd.c     ****         lcd_e_low();
+ 226:src/lcd.c     ****     }
+ 227:src/lcd.c     ****     else
+ 228:src/lcd.c     ****     {
+ 229:src/lcd.c     ****         /* configure data pins as input */
+ 230:src/lcd.c     ****         DDR(LCD_DATA0_PORT) &= ~_BV(LCD_DATA0_PIN);
+ 179               		.loc 1 230 0
+ 180 007c 2298      		cbi 0x4,2
+ 231:src/lcd.c     ****         DDR(LCD_DATA1_PORT) &= ~_BV(LCD_DATA1_PIN);
+ 181               		.loc 1 231 0
+ 182 007e 2398      		cbi 0x4,3
+ 232:src/lcd.c     ****         DDR(LCD_DATA2_PORT) &= ~_BV(LCD_DATA2_PIN);
+ 183               		.loc 1 232 0
+ 184 0080 2498      		cbi 0x4,4
+ 233:src/lcd.c     ****         DDR(LCD_DATA3_PORT) &= ~_BV(LCD_DATA3_PIN);
+ 185               		.loc 1 233 0
+ 186 0082 2598      		cbi 0x4,5
+ 234:src/lcd.c     ****                 
+ 235:src/lcd.c     ****         /* read high nibble first */
+ 236:src/lcd.c     ****         lcd_e_high();
+ 187               		.loc 1 236 0
+ 188 0084 299A      		sbi 0x5,1
+ 189               	.LVL5:
+ 190               	.LBB30:
+ 191               	.LBB31:
+ 192               		.loc 2 245 0
+ 193 0086 85E0      		ldi r24,lo8(5)
+ 194 0088 8A95      	1:	dec r24
+ 195 008a 01F4      		brne 1b
+ 196 008c 0000      		nop
+ 197               	.LVL6:
+ 198               	.LBE31:
+ 199               	.LBE30:
+ 237:src/lcd.c     ****         lcd_e_delay();        
+ 238:src/lcd.c     ****         data = 0;
+ 239:src/lcd.c     ****         if ( PIN(LCD_DATA0_PORT) & _BV(LCD_DATA0_PIN) ) data |= 0x10;
+ 200               		.loc 1 239 0
+ 201 008e 1A9B      		sbis 0x3,2
+ 202 0090 00C0      		rjmp .L44
+ 203 0092 80E1      		ldi r24,lo8(16)
+ 204 0094 00C0      		rjmp .L36
+ 205               	.L44:
+ 238:src/lcd.c     ****         if ( PIN(LCD_DATA0_PORT) & _BV(LCD_DATA0_PIN) ) data |= 0x10;
+ 206               		.loc 1 238 0
+ 207 0096 80E0      		ldi r24,0
+ 208               	.L36:
+ 209               	.LVL7:
+ 240:src/lcd.c     ****         if ( PIN(LCD_DATA1_PORT) & _BV(LCD_DATA1_PIN) ) data |= 0x20;
+ 210               		.loc 1 240 0
+ 211 0098 1B99      		sbic 0x3,3
+ 212 009a 8062      		ori r24,lo8(32)
+ 213               	.LVL8:
+ 214               	.L37:
+ 241:src/lcd.c     ****         if ( PIN(LCD_DATA2_PORT) & _BV(LCD_DATA2_PIN) ) data |= 0x40;
+ 215               		.loc 1 241 0
+ 216 009c 1C99      		sbic 0x3,4
+ 217 009e 8064      		ori r24,lo8(64)
+ 218               	.LVL9:
+ 219               	.L38:
+ 242:src/lcd.c     ****         if ( PIN(LCD_DATA3_PORT) & _BV(LCD_DATA3_PIN) ) data |= 0x80;
+ 220               		.loc 1 242 0
+ 221 00a0 1D99      		sbic 0x3,5
+ 222 00a2 8068      		ori r24,lo8(-128)
+ 223               	.LVL10:
+ 224               	.L39:
+ 243:src/lcd.c     ****         lcd_e_low();
+ 225               		.loc 1 243 0
+ 226 00a4 2998      		cbi 0x5,1
+ 227               	.LVL11:
+ 228               	.LBB32:
+ 229               	.LBB33:
+ 230               		.loc 2 245 0
+ 231 00a6 95E0      		ldi r25,lo8(5)
+ 232 00a8 9A95      	1:	dec r25
+ 233 00aa 01F4      		brne 1b
+ 234 00ac 0000      		nop
+ 235               	.LBE33:
+ 236               	.LBE32:
+ 244:src/lcd.c     **** 
+ 245:src/lcd.c     ****         lcd_e_delay();                       /* Enable 500ns low       */
+ 246:src/lcd.c     ****     
+ 247:src/lcd.c     ****         /* read low nibble */    
+ 248:src/lcd.c     ****         lcd_e_high();
+ 237               		.loc 1 248 0
+ 238 00ae 299A      		sbi 0x5,1
+ 239               	.LVL12:
+ 240               	.LBB34:
+ 241               	.LBB35:
+ 242               		.loc 2 245 0
+ 243 00b0 95E0      		ldi r25,lo8(5)
+ 244 00b2 9A95      	1:	dec r25
+ 245 00b4 01F4      		brne 1b
+ 246 00b6 0000      		nop
+ 247               	.LBE35:
+ 248               	.LBE34:
+ 249:src/lcd.c     ****         lcd_e_delay();
+ 250:src/lcd.c     ****         if ( PIN(LCD_DATA0_PORT) & _BV(LCD_DATA0_PIN) ) data |= 0x01;
+ 249               		.loc 1 250 0
+ 250 00b8 1A99      		sbic 0x3,2
+ 251 00ba 8160      		ori r24,lo8(1)
+ 252               	.LVL13:
+ 253               	.L40:
+ 251:src/lcd.c     ****         if ( PIN(LCD_DATA1_PORT) & _BV(LCD_DATA1_PIN) ) data |= 0x02;
+ 254               		.loc 1 251 0
+ 255 00bc 1B99      		sbic 0x3,3
+ 256 00be 8260      		ori r24,lo8(2)
+ 257               	.LVL14:
+ 258               	.L41:
+ 252:src/lcd.c     ****         if ( PIN(LCD_DATA2_PORT) & _BV(LCD_DATA2_PIN) ) data |= 0x04;
+ 259               		.loc 1 252 0
+ 260 00c0 1C99      		sbic 0x3,4
+ 261 00c2 8460      		ori r24,lo8(4)
+ 262               	.LVL15:
+ 263               	.L42:
+ 253:src/lcd.c     ****         if ( PIN(LCD_DATA3_PORT) & _BV(LCD_DATA3_PIN) ) data |= 0x08;        
+ 264               		.loc 1 253 0
+ 265 00c4 1D99      		sbic 0x3,5
+ 266 00c6 8860      		ori r24,lo8(8)
+ 267               	.LVL16:
+ 268               	.L43:
+ 254:src/lcd.c     ****         lcd_e_low();
+ 269               		.loc 1 254 0
+ 270 00c8 2998      		cbi 0x5,1
+ 255:src/lcd.c     ****     }
+ 256:src/lcd.c     ****     return data;
+ 257:src/lcd.c     **** }
+ 271               		.loc 1 257 0
+ 272 00ca 0895      		ret
+ 273               		.cfi_endproc
+ 274               	.LFE22:
+ 277               	lcd_waitbusy:
+ 278               	.LFB10:
+ 258:src/lcd.c     **** #else
+ 259:src/lcd.c     **** #define lcd_read(rs) (rs) ? *(volatile uint8_t*)(LCD_IO_DATA+LCD_IO_READ) : *(volatile uint8_t*)(LC
+ 260:src/lcd.c     **** /* rs==0 -> read instruction from LCD_IO_FUNCTION */
+ 261:src/lcd.c     **** /* rs==1 -> read data from LCD_IO_DATA */
+ 262:src/lcd.c     **** #endif
+ 263:src/lcd.c     **** 
+ 264:src/lcd.c     **** 
+ 265:src/lcd.c     **** /*************************************************************************
+ 266:src/lcd.c     **** loops while lcd is busy, returns address counter
+ 267:src/lcd.c     **** *************************************************************************/
+ 268:src/lcd.c     **** static uint8_t lcd_waitbusy(void)
+ 269:src/lcd.c     **** 
+ 270:src/lcd.c     **** {
+ 279               		.loc 1 270 0
+ 280               		.cfi_startproc
+ 281               	/* prologue: function */
+ 282               	/* frame size = 0 */
+ 283               	/* stack size = 0 */
+ 284               	.L__stack_usage = 0
+ 285               	.L67:
+ 271:src/lcd.c     ****     register uint8_t c;
+ 272:src/lcd.c     ****     
+ 273:src/lcd.c     ****     /* wait until busy flag is cleared */
+ 274:src/lcd.c     ****     while ( (c=lcd_read(0)) & (1<<LCD_BUSY)) {}
+ 286               		.loc 1 274 0 discriminator 1
+ 287 00cc 0E94 0000 		call lcd_read.constprop.0
+ 288               	.LVL17:
+ 289 00d0 87FD      		sbrc r24,7
+ 290 00d2 00C0      		rjmp .L67
+ 291               	.LVL18:
+ 292               	.LBB36:
+ 293               	.LBB37:
+ 294               		.loc 2 245 0
+ 295 00d4 85E1      		ldi r24,lo8(21)
+ 296 00d6 8A95      	1:	dec r24
+ 297 00d8 01F4      		brne 1b
+ 298               	.LVL19:
+ 299 00da 0000      		nop
+ 300               	.LBE37:
+ 301               	.LBE36:
+ 275:src/lcd.c     ****     
+ 276:src/lcd.c     ****     /* the address counter is updated 4us after the busy flag is cleared */
+ 277:src/lcd.c     ****     delay(LCD_DELAY_BUSY_FLAG);
+ 278:src/lcd.c     **** 
+ 279:src/lcd.c     ****     /* now read the address counter */
+ 280:src/lcd.c     ****     return (lcd_read(0));  // return address counter
+ 302               		.loc 1 280 0
+ 303 00dc 0C94 0000 		jmp lcd_read.constprop.0
+ 304               	.LVL20:
+ 305               		.cfi_endproc
+ 306               	.LFE10:
+ 308               	.global	lcd_command
+ 310               	lcd_command:
+ 311               	.LFB12:
+ 281:src/lcd.c     ****     
+ 282:src/lcd.c     **** }/* lcd_waitbusy */
+ 283:src/lcd.c     **** 
+ 284:src/lcd.c     **** 
+ 285:src/lcd.c     **** /*************************************************************************
+ 286:src/lcd.c     **** Move cursor to the start of next line or to the first line if the cursor 
+ 287:src/lcd.c     **** is already on the last line.
+ 288:src/lcd.c     **** *************************************************************************/
+ 289:src/lcd.c     **** static inline void lcd_newline(uint8_t pos)
+ 290:src/lcd.c     **** {
+ 291:src/lcd.c     ****     register uint8_t addressCounter;
+ 292:src/lcd.c     **** 
+ 293:src/lcd.c     **** 
+ 294:src/lcd.c     **** #if LCD_LINES==1
+ 295:src/lcd.c     ****     addressCounter = 0;
+ 296:src/lcd.c     **** #endif
+ 297:src/lcd.c     **** #if LCD_LINES==2
+ 298:src/lcd.c     ****     if ( pos < (LCD_START_LINE2) )
+ 299:src/lcd.c     ****         addressCounter = LCD_START_LINE2;
+ 300:src/lcd.c     ****     else
+ 301:src/lcd.c     ****         addressCounter = LCD_START_LINE1;
+ 302:src/lcd.c     **** #endif
+ 303:src/lcd.c     **** #if LCD_LINES==4
+ 304:src/lcd.c     **** #if KS0073_4LINES_MODE
+ 305:src/lcd.c     ****     if ( pos < LCD_START_LINE2 )
+ 306:src/lcd.c     ****         addressCounter = LCD_START_LINE2;
+ 307:src/lcd.c     ****     else if ( (pos >= LCD_START_LINE2) && (pos < LCD_START_LINE3) )
+ 308:src/lcd.c     ****         addressCounter = LCD_START_LINE3;
+ 309:src/lcd.c     ****     else if ( (pos >= LCD_START_LINE3) && (pos < LCD_START_LINE4) )
+ 310:src/lcd.c     ****         addressCounter = LCD_START_LINE4;
+ 311:src/lcd.c     ****     else 
+ 312:src/lcd.c     ****         addressCounter = LCD_START_LINE1;
+ 313:src/lcd.c     **** #else
+ 314:src/lcd.c     ****     if ( pos < LCD_START_LINE3 )
+ 315:src/lcd.c     ****         addressCounter = LCD_START_LINE2;
+ 316:src/lcd.c     ****     else if ( (pos >= LCD_START_LINE2) && (pos < LCD_START_LINE4) )
+ 317:src/lcd.c     ****         addressCounter = LCD_START_LINE3;
+ 318:src/lcd.c     ****     else if ( (pos >= LCD_START_LINE3) && (pos < LCD_START_LINE2) )
+ 319:src/lcd.c     ****         addressCounter = LCD_START_LINE4;
+ 320:src/lcd.c     ****     else 
+ 321:src/lcd.c     ****         addressCounter = LCD_START_LINE1;
+ 322:src/lcd.c     **** #endif
+ 323:src/lcd.c     **** #endif
+ 324:src/lcd.c     ****     lcd_command((1<<LCD_DDRAM)+addressCounter);
+ 325:src/lcd.c     **** 
+ 326:src/lcd.c     **** }/* lcd_newline */
+ 327:src/lcd.c     **** 
+ 328:src/lcd.c     **** 
+ 329:src/lcd.c     **** /*
+ 330:src/lcd.c     **** ** PUBLIC FUNCTIONS 
+ 331:src/lcd.c     **** */
+ 332:src/lcd.c     **** 
+ 333:src/lcd.c     **** /*************************************************************************
+ 334:src/lcd.c     **** Send LCD controller instruction command
+ 335:src/lcd.c     **** Input:   instruction to send to LCD controller, see HD44780 data sheet
+ 336:src/lcd.c     **** Returns: none
+ 337:src/lcd.c     **** *************************************************************************/
+ 338:src/lcd.c     **** void lcd_command(uint8_t cmd)
+ 339:src/lcd.c     **** {
+ 312               		.loc 1 339 0
+ 313               		.cfi_startproc
+ 314               	.LVL21:
+ 315 00e0 CF93      		push r28
+ 316               	.LCFI4:
+ 317               		.cfi_def_cfa_offset 3
+ 318               		.cfi_offset 28, -2
+ 319               	/* prologue: function */
+ 320               	/* frame size = 0 */
+ 321               	/* stack size = 1 */
+ 322               	.L__stack_usage = 1
+ 323 00e2 C82F      		mov r28,r24
+ 340:src/lcd.c     ****     lcd_waitbusy();
+ 324               		.loc 1 340 0
+ 325 00e4 0E94 0000 		call lcd_waitbusy
+ 326               	.LVL22:
+ 341:src/lcd.c     ****     lcd_write(cmd,0);
+ 327               		.loc 1 341 0
+ 328 00e8 60E0      		ldi r22,0
+ 329 00ea 8C2F      		mov r24,r28
+ 330               	/* epilogue start */
+ 342:src/lcd.c     **** }
+ 331               		.loc 1 342 0
+ 332 00ec CF91      		pop r28
+ 333               	.LVL23:
+ 341:src/lcd.c     ****     lcd_write(cmd,0);
+ 334               		.loc 1 341 0
+ 335 00ee 0C94 0000 		jmp lcd_write
+ 336               	.LVL24:
+ 337               		.cfi_endproc
+ 338               	.LFE12:
+ 340               	.global	lcd_data
+ 342               	lcd_data:
+ 343               	.LFB13:
+ 343:src/lcd.c     **** 
+ 344:src/lcd.c     **** 
+ 345:src/lcd.c     **** /*************************************************************************
+ 346:src/lcd.c     **** Send data byte to LCD controller 
+ 347:src/lcd.c     **** Input:   data to send to LCD controller, see HD44780 data sheet
+ 348:src/lcd.c     **** Returns: none
+ 349:src/lcd.c     **** *************************************************************************/
+ 350:src/lcd.c     **** void lcd_data(uint8_t data)
+ 351:src/lcd.c     **** {
+ 344               		.loc 1 351 0
+ 345               		.cfi_startproc
+ 346               	.LVL25:
+ 347 00f2 CF93      		push r28
+ 348               	.LCFI5:
+ 349               		.cfi_def_cfa_offset 3
+ 350               		.cfi_offset 28, -2
+ 351               	/* prologue: function */
+ 352               	/* frame size = 0 */
+ 353               	/* stack size = 1 */
+ 354               	.L__stack_usage = 1
+ 355 00f4 C82F      		mov r28,r24
+ 352:src/lcd.c     ****     lcd_waitbusy();
+ 356               		.loc 1 352 0
+ 357 00f6 0E94 0000 		call lcd_waitbusy
+ 358               	.LVL26:
+ 353:src/lcd.c     ****     lcd_write(data,1);
+ 359               		.loc 1 353 0
+ 360 00fa 61E0      		ldi r22,lo8(1)
+ 361 00fc 8C2F      		mov r24,r28
+ 362               	/* epilogue start */
+ 354:src/lcd.c     **** }
+ 363               		.loc 1 354 0
+ 364 00fe CF91      		pop r28
+ 365               	.LVL27:
+ 353:src/lcd.c     ****     lcd_write(data,1);
+ 366               		.loc 1 353 0
+ 367 0100 0C94 0000 		jmp lcd_write
+ 368               	.LVL28:
+ 369               		.cfi_endproc
+ 370               	.LFE13:
+ 372               	.global	lcd_gotoxy
+ 374               	lcd_gotoxy:
+ 375               	.LFB14:
+ 355:src/lcd.c     **** 
+ 356:src/lcd.c     **** 
+ 357:src/lcd.c     **** 
+ 358:src/lcd.c     **** /*************************************************************************
+ 359:src/lcd.c     **** Set cursor to specified position
+ 360:src/lcd.c     **** Input:    x  horizontal position  (0: left most position)
+ 361:src/lcd.c     ****           y  vertical position    (0: first line)
+ 362:src/lcd.c     **** Returns:  none
+ 363:src/lcd.c     **** *************************************************************************/
+ 364:src/lcd.c     **** void lcd_gotoxy(uint8_t x, uint8_t y)
+ 365:src/lcd.c     **** {
+ 376               		.loc 1 365 0
+ 377               		.cfi_startproc
+ 378               	.LVL29:
+ 379               	/* prologue: function */
+ 380               	/* frame size = 0 */
+ 381               	/* stack size = 0 */
+ 382               	.L__stack_usage = 0
+ 366:src/lcd.c     **** #if LCD_LINES==1
+ 367:src/lcd.c     ****     lcd_command((1<<LCD_DDRAM)+LCD_START_LINE1+x);
+ 368:src/lcd.c     **** #endif
+ 369:src/lcd.c     **** #if LCD_LINES==2
+ 370:src/lcd.c     ****     if ( y==0 ) 
+ 371:src/lcd.c     ****         lcd_command((1<<LCD_DDRAM)+LCD_START_LINE1+x);
+ 372:src/lcd.c     ****     else
+ 373:src/lcd.c     ****         lcd_command((1<<LCD_DDRAM)+LCD_START_LINE2+x);
+ 374:src/lcd.c     **** #endif
+ 375:src/lcd.c     **** #if LCD_LINES==4
+ 376:src/lcd.c     ****     if ( y==0 )
+ 383               		.loc 1 376 0
+ 384 0104 6111      		cpse r22,__zero_reg__
+ 385 0106 00C0      		rjmp .L72
+ 377:src/lcd.c     ****         lcd_command((1<<LCD_DDRAM)+LCD_START_LINE1+x);
+ 386               		.loc 1 377 0
+ 387 0108 8058      		subi r24,lo8(-(-128))
+ 388               	.LVL30:
+ 389 010a 00C0      		rjmp .L75
+ 390               	.LVL31:
+ 391               	.L72:
+ 378:src/lcd.c     ****     else if ( y==1)
+ 392               		.loc 1 378 0
+ 393 010c 6130      		cpi r22,lo8(1)
+ 394 010e 01F4      		brne .L73
+ 379:src/lcd.c     ****         lcd_command((1<<LCD_DDRAM)+LCD_START_LINE2+x);
+ 395               		.loc 1 379 0
+ 396 0110 8054      		subi r24,lo8(-(-64))
+ 397               	.LVL32:
+ 398 0112 00C0      		rjmp .L75
+ 399               	.LVL33:
+ 400               	.L73:
+ 380:src/lcd.c     ****     else if ( y==2)
+ 401               		.loc 1 380 0
+ 402 0114 6230      		cpi r22,lo8(2)
+ 403 0116 01F4      		brne .L74
+ 381:src/lcd.c     ****         lcd_command((1<<LCD_DDRAM)+LCD_START_LINE3+x);
+ 404               		.loc 1 381 0
+ 405 0118 8C56      		subi r24,lo8(-(-108))
+ 406               	.LVL34:
+ 407 011a 00C0      		rjmp .L75
+ 408               	.LVL35:
+ 409               	.L74:
+ 382:src/lcd.c     ****     else /* y==3 */
+ 383:src/lcd.c     ****         lcd_command((1<<LCD_DDRAM)+LCD_START_LINE4+x);
+ 410               		.loc 1 383 0
+ 411 011c 8C52      		subi r24,lo8(-(-44))
+ 412               	.LVL36:
+ 413               	.L75:
+ 414 011e 0C94 0000 		jmp lcd_command
+ 415               	.LVL37:
+ 416               		.cfi_endproc
+ 417               	.LFE14:
+ 419               	.global	lcd_getxy
+ 421               	lcd_getxy:
+ 422               	.LFB15:
+ 384:src/lcd.c     **** #endif
+ 385:src/lcd.c     **** 
+ 386:src/lcd.c     **** }/* lcd_gotoxy */
+ 387:src/lcd.c     **** 
+ 388:src/lcd.c     **** 
+ 389:src/lcd.c     **** /*************************************************************************
+ 390:src/lcd.c     **** *************************************************************************/
+ 391:src/lcd.c     **** int lcd_getxy(void)
+ 392:src/lcd.c     **** {
+ 423               		.loc 1 392 0
+ 424               		.cfi_startproc
+ 425               	/* prologue: function */
+ 426               	/* frame size = 0 */
+ 427               	/* stack size = 0 */
+ 428               	.L__stack_usage = 0
+ 393:src/lcd.c     ****     return lcd_waitbusy();
+ 429               		.loc 1 393 0
+ 430 0122 0E94 0000 		call lcd_waitbusy
+ 431               	.LVL38:
+ 394:src/lcd.c     **** }
+ 432               		.loc 1 394 0
+ 433 0126 90E0      		ldi r25,0
+ 434 0128 0895      		ret
+ 435               		.cfi_endproc
+ 436               	.LFE15:
+ 438               	.global	lcd_clrscr
+ 440               	lcd_clrscr:
+ 441               	.LFB16:
+ 395:src/lcd.c     **** 
+ 396:src/lcd.c     **** 
+ 397:src/lcd.c     **** /*************************************************************************
+ 398:src/lcd.c     **** Clear display and set cursor to home position
+ 399:src/lcd.c     **** *************************************************************************/
+ 400:src/lcd.c     **** void lcd_clrscr(void)
+ 401:src/lcd.c     **** {
+ 442               		.loc 1 401 0
+ 443               		.cfi_startproc
+ 444               	/* prologue: function */
+ 445               	/* frame size = 0 */
+ 446               	/* stack size = 0 */
+ 447               	.L__stack_usage = 0
+ 402:src/lcd.c     ****     lcd_command(1<<LCD_CLR);
+ 448               		.loc 1 402 0
+ 449 012a 81E0      		ldi r24,lo8(1)
+ 450 012c 0C94 0000 		jmp lcd_command
+ 451               	.LVL39:
+ 452               		.cfi_endproc
+ 453               	.LFE16:
+ 455               	.global	lcd_home
+ 457               	lcd_home:
+ 458               	.LFB17:
+ 403:src/lcd.c     **** }
+ 404:src/lcd.c     **** 
+ 405:src/lcd.c     **** 
+ 406:src/lcd.c     **** /*************************************************************************
+ 407:src/lcd.c     **** Set cursor to home position
+ 408:src/lcd.c     **** *************************************************************************/
+ 409:src/lcd.c     **** void lcd_home(void)
+ 410:src/lcd.c     **** {
+ 459               		.loc 1 410 0
+ 460               		.cfi_startproc
+ 461               	/* prologue: function */
+ 462               	/* frame size = 0 */
+ 463               	/* stack size = 0 */
+ 464               	.L__stack_usage = 0
+ 411:src/lcd.c     ****     lcd_command(1<<LCD_HOME);
+ 465               		.loc 1 411 0
+ 466 0130 82E0      		ldi r24,lo8(2)
+ 467 0132 0C94 0000 		jmp lcd_command
+ 468               	.LVL40:
+ 469               		.cfi_endproc
+ 470               	.LFE17:
+ 472               	.global	lcd_putc
+ 474               	lcd_putc:
+ 475               	.LFB18:
+ 412:src/lcd.c     **** }
+ 413:src/lcd.c     **** 
+ 414:src/lcd.c     **** 
+ 415:src/lcd.c     **** /*************************************************************************
+ 416:src/lcd.c     **** Display character at current cursor position 
+ 417:src/lcd.c     **** Input:    character to be displayed                                       
+ 418:src/lcd.c     **** Returns:  none
+ 419:src/lcd.c     **** *************************************************************************/
+ 420:src/lcd.c     **** void lcd_putc(char c)
+ 421:src/lcd.c     **** {
+ 476               		.loc 1 421 0
+ 477               		.cfi_startproc
+ 478               	.LVL41:
+ 479 0136 CF93      		push r28
+ 480               	.LCFI6:
+ 481               		.cfi_def_cfa_offset 3
+ 482               		.cfi_offset 28, -2
+ 483               	/* prologue: function */
+ 484               	/* frame size = 0 */
+ 485               	/* stack size = 1 */
+ 486               	.L__stack_usage = 1
+ 487 0138 C82F      		mov r28,r24
+ 422:src/lcd.c     ****     uint8_t pos;
+ 423:src/lcd.c     **** 
+ 424:src/lcd.c     **** 
+ 425:src/lcd.c     ****     pos = lcd_waitbusy();   // read busy-flag and address counter
+ 488               		.loc 1 425 0
+ 489 013a 0E94 0000 		call lcd_waitbusy
+ 490               	.LVL42:
+ 491 013e 982F      		mov r25,r24
+ 492               	.LVL43:
+ 426:src/lcd.c     ****     if (c=='\n')
+ 493               		.loc 1 426 0
+ 494 0140 CA30      		cpi r28,lo8(10)
+ 495 0142 01F4      		brne .L80
+ 496               	.LVL44:
+ 497               	.LBB40:
+ 498               	.LBB41:
+ 314:src/lcd.c     ****         addressCounter = LCD_START_LINE2;
+ 499               		.loc 1 314 0
+ 500 0144 8431      		cpi r24,lo8(20)
+ 501 0146 00F0      		brlo .L82
+ 316:src/lcd.c     ****         addressCounter = LCD_START_LINE3;
+ 502               		.loc 1 316 0
+ 503 0148 80EC      		ldi r24,lo8(-64)
+ 504               	.LVL45:
+ 505 014a 890F      		add r24,r25
+ 506 014c 8431      		cpi r24,lo8(20)
+ 507 014e 00F0      		brlo .L83
+ 318:src/lcd.c     ****         addressCounter = LCD_START_LINE4;
+ 508               		.loc 1 318 0
+ 509 0150 9451      		subi r25,lo8(-(-20))
+ 510               	.LVL46:
+ 511 0152 9C32      		cpi r25,lo8(44)
+ 512 0154 00F0      		brlo .L84
+ 321:src/lcd.c     **** #endif
+ 513               		.loc 1 321 0
+ 514 0156 80E0      		ldi r24,0
+ 515 0158 00C0      		rjmp .L81
+ 516               	.LVL47:
+ 517               	.L82:
+ 315:src/lcd.c     ****     else if ( (pos >= LCD_START_LINE2) && (pos < LCD_START_LINE4) )
+ 518               		.loc 1 315 0
+ 519 015a 80E4      		ldi r24,lo8(64)
+ 520               	.LVL48:
+ 521 015c 00C0      		rjmp .L81
+ 522               	.L83:
+ 317:src/lcd.c     ****     else if ( (pos >= LCD_START_LINE3) && (pos < LCD_START_LINE2) )
+ 523               		.loc 1 317 0
+ 524 015e 84E1      		ldi r24,lo8(20)
+ 525 0160 00C0      		rjmp .L81
+ 526               	.LVL49:
+ 527               	.L84:
+ 319:src/lcd.c     ****     else 
+ 528               		.loc 1 319 0
+ 529 0162 84E5      		ldi r24,lo8(84)
+ 530               	.LVL50:
+ 531               	.L81:
+ 324:src/lcd.c     **** 
+ 532               		.loc 1 324 0
+ 533 0164 8058      		subi r24,lo8(-(-128))
+ 534               	.LVL51:
+ 535               	/* epilogue start */
+ 536               	.LBE41:
+ 537               	.LBE40:
+ 427:src/lcd.c     ****     {
+ 428:src/lcd.c     ****         lcd_newline(pos);
+ 429:src/lcd.c     ****     }
+ 430:src/lcd.c     ****     else
+ 431:src/lcd.c     ****     {
+ 432:src/lcd.c     **** #if LCD_WRAP_LINES==1
+ 433:src/lcd.c     **** #if LCD_LINES==1
+ 434:src/lcd.c     ****         if ( pos == LCD_START_LINE1+LCD_DISP_LENGTH ) {
+ 435:src/lcd.c     ****             lcd_write((1<<LCD_DDRAM)+LCD_START_LINE1,0);
+ 436:src/lcd.c     ****         }
+ 437:src/lcd.c     **** #elif LCD_LINES==2
+ 438:src/lcd.c     ****         if ( pos == LCD_START_LINE1+LCD_DISP_LENGTH ) {
+ 439:src/lcd.c     ****             lcd_write((1<<LCD_DDRAM)+LCD_START_LINE2,0);    
+ 440:src/lcd.c     ****         }else if ( pos == LCD_START_LINE2+LCD_DISP_LENGTH ){
+ 441:src/lcd.c     ****             lcd_write((1<<LCD_DDRAM)+LCD_START_LINE1,0);
+ 442:src/lcd.c     ****         }
+ 443:src/lcd.c     **** #elif LCD_LINES==4
+ 444:src/lcd.c     ****         if ( pos == LCD_START_LINE1+LCD_DISP_LENGTH ) {
+ 445:src/lcd.c     ****             lcd_write((1<<LCD_DDRAM)+LCD_START_LINE2,0);    
+ 446:src/lcd.c     ****         }else if ( pos == LCD_START_LINE2+LCD_DISP_LENGTH ) {
+ 447:src/lcd.c     ****             lcd_write((1<<LCD_DDRAM)+LCD_START_LINE3,0);
+ 448:src/lcd.c     ****         }else if ( pos == LCD_START_LINE3+LCD_DISP_LENGTH ) {
+ 449:src/lcd.c     ****             lcd_write((1<<LCD_DDRAM)+LCD_START_LINE4,0);
+ 450:src/lcd.c     ****         }else if ( pos == LCD_START_LINE4+LCD_DISP_LENGTH ) {
+ 451:src/lcd.c     ****             lcd_write((1<<LCD_DDRAM)+LCD_START_LINE1,0);
+ 452:src/lcd.c     ****         }
+ 453:src/lcd.c     **** #endif
+ 454:src/lcd.c     ****         lcd_waitbusy();
+ 455:src/lcd.c     **** #endif
+ 456:src/lcd.c     ****         lcd_write(c, 1);
+ 457:src/lcd.c     ****     }
+ 458:src/lcd.c     **** 
+ 459:src/lcd.c     **** }/* lcd_putc */
+ 538               		.loc 1 459 0
+ 539 0166 CF91      		pop r28
+ 540               	.LVL52:
+ 541               	.LBB43:
+ 542               	.LBB42:
+ 324:src/lcd.c     **** 
+ 543               		.loc 1 324 0
+ 544 0168 0C94 0000 		jmp lcd_command
+ 545               	.LVL53:
+ 546               	.L80:
+ 547               	.LBE42:
+ 548               	.LBE43:
+ 456:src/lcd.c     ****     }
+ 549               		.loc 1 456 0
+ 550 016c 61E0      		ldi r22,lo8(1)
+ 551 016e 8C2F      		mov r24,r28
+ 552               	.LVL54:
+ 553               	/* epilogue start */
+ 554               		.loc 1 459 0
+ 555 0170 CF91      		pop r28
+ 556               	.LVL55:
+ 456:src/lcd.c     ****     }
+ 557               		.loc 1 456 0
+ 558 0172 0C94 0000 		jmp lcd_write
+ 559               	.LVL56:
+ 560               		.cfi_endproc
+ 561               	.LFE18:
+ 563               	.global	lcd_puts
+ 565               	lcd_puts:
+ 566               	.LFB19:
+ 460:src/lcd.c     **** 
+ 461:src/lcd.c     **** 
+ 462:src/lcd.c     **** /*************************************************************************
+ 463:src/lcd.c     **** Display string without auto linefeed 
+ 464:src/lcd.c     **** Input:    string to be displayed
+ 465:src/lcd.c     **** Returns:  none
+ 466:src/lcd.c     **** *************************************************************************/
+ 467:src/lcd.c     **** void lcd_puts(const char *s)
+ 468:src/lcd.c     **** /* print string on lcd (no auto linefeed) */
+ 469:src/lcd.c     **** {
+ 567               		.loc 1 469 0
+ 568               		.cfi_startproc
+ 569               	.LVL57:
+ 570 0176 CF93      		push r28
+ 571               	.LCFI7:
+ 572               		.cfi_def_cfa_offset 3
+ 573               		.cfi_offset 28, -2
+ 574 0178 DF93      		push r29
+ 575               	.LCFI8:
+ 576               		.cfi_def_cfa_offset 4
+ 577               		.cfi_offset 29, -3
+ 578               	/* prologue: function */
+ 579               	/* frame size = 0 */
+ 580               	/* stack size = 2 */
+ 581               	.L__stack_usage = 2
+ 582 017a EC01      		movw r28,r24
+ 583               	.LVL58:
+ 584               	.L86:
+ 470:src/lcd.c     ****     register char c;
+ 471:src/lcd.c     **** 
+ 472:src/lcd.c     ****     while ( (c = *s++) ) {
+ 585               		.loc 1 472 0
+ 586 017c 8991      		ld r24,Y+
+ 587               	.LVL59:
+ 588 017e 8823      		tst r24
+ 589 0180 01F0      		breq .L88
+ 473:src/lcd.c     ****         lcd_putc(c);
+ 590               		.loc 1 473 0
+ 591 0182 0E94 0000 		call lcd_putc
+ 592               	.LVL60:
+ 593 0186 00C0      		rjmp .L86
+ 594               	.LVL61:
+ 595               	.L88:
+ 596               	/* epilogue start */
+ 474:src/lcd.c     ****     }
+ 475:src/lcd.c     **** 
+ 476:src/lcd.c     **** }/* lcd_puts */
+ 597               		.loc 1 476 0
+ 598 0188 DF91      		pop r29
+ 599 018a CF91      		pop r28
+ 600               	.LVL62:
+ 601 018c 0895      		ret
+ 602               		.cfi_endproc
+ 603               	.LFE19:
+ 605               	.global	lcd_puts_p
+ 607               	lcd_puts_p:
+ 608               	.LFB20:
+ 477:src/lcd.c     **** 
+ 478:src/lcd.c     **** 
+ 479:src/lcd.c     **** /*************************************************************************
+ 480:src/lcd.c     **** Display string from program memory without auto linefeed 
+ 481:src/lcd.c     **** Input:     string from program memory be be displayed                                        
+ 482:src/lcd.c     **** Returns:   none
+ 483:src/lcd.c     **** *************************************************************************/
+ 484:src/lcd.c     **** void lcd_puts_p(const char *progmem_s)
+ 485:src/lcd.c     **** /* print string from program memory on lcd (no auto linefeed) */
+ 486:src/lcd.c     **** {
+ 609               		.loc 1 486 0
+ 610               		.cfi_startproc
+ 611               	.LVL63:
+ 612 018e CF93      		push r28
+ 613               	.LCFI9:
+ 614               		.cfi_def_cfa_offset 3
+ 615               		.cfi_offset 28, -2
+ 616 0190 DF93      		push r29
+ 617               	.LCFI10:
+ 618               		.cfi_def_cfa_offset 4
+ 619               		.cfi_offset 29, -3
+ 620               	/* prologue: function */
+ 621               	/* frame size = 0 */
+ 622               	/* stack size = 2 */
+ 623               	.L__stack_usage = 2
+ 624 0192 FC01      		movw r30,r24
+ 625               	.LVL64:
+ 626               	.L90:
+ 627               	.LBB44:
+ 487:src/lcd.c     ****     register char c;
+ 488:src/lcd.c     **** 
+ 489:src/lcd.c     ****     while ( (c = pgm_read_byte(progmem_s++)) ) {
+ 628               		.loc 1 489 0
+ 629               	/* #APP */
+ 630               	 ;  489 "src/lcd.c" 1
+ 631 0194 8491      		lpm r24, Z
+ 632               		
+ 633               	 ;  0 "" 2
+ 634               	.LVL65:
+ 635               	/* #NOAPP */
+ 636 0196 EF01      		movw r28,r30
+ 637 0198 2196      		adiw r28,1
+ 638               	.LVL66:
+ 639               	.LBE44:
+ 640 019a 8823      		tst r24
+ 641 019c 01F0      		breq .L92
+ 490:src/lcd.c     ****         lcd_putc(c);
+ 642               		.loc 1 490 0
+ 643 019e 0E94 0000 		call lcd_putc
+ 644               	.LVL67:
+ 645 01a2 FE01      		movw r30,r28
+ 646 01a4 00C0      		rjmp .L90
+ 647               	.LVL68:
+ 648               	.L92:
+ 649               	/* epilogue start */
+ 491:src/lcd.c     ****     }
+ 492:src/lcd.c     **** 
+ 493:src/lcd.c     **** }/* lcd_puts_p */
+ 650               		.loc 1 493 0
+ 651 01a6 DF91      		pop r29
+ 652 01a8 CF91      		pop r28
+ 653               	.LVL69:
+ 654 01aa 0895      		ret
+ 655               		.cfi_endproc
+ 656               	.LFE20:
+ 658               	.global	lcd_init
+ 660               	lcd_init:
+ 661               	.LFB21:
+ 494:src/lcd.c     **** 
+ 495:src/lcd.c     **** 
+ 496:src/lcd.c     **** /*************************************************************************
+ 497:src/lcd.c     **** Initialize display and select type of cursor 
+ 498:src/lcd.c     **** Input:    dispAttr LCD_DISP_OFF            display off
+ 499:src/lcd.c     ****                    LCD_DISP_ON             display on, cursor off
+ 500:src/lcd.c     ****                    LCD_DISP_ON_CURSOR      display on, cursor on
+ 501:src/lcd.c     ****                    LCD_DISP_CURSOR_BLINK   display on, cursor on flashing
+ 502:src/lcd.c     **** Returns:  none
+ 503:src/lcd.c     **** *************************************************************************/
+ 504:src/lcd.c     **** void lcd_init(uint8_t dispAttr)
+ 505:src/lcd.c     **** {
+ 662               		.loc 1 505 0
+ 663               		.cfi_startproc
+ 664               	.LVL70:
+ 665 01ac CF93      		push r28
+ 666               	.LCFI11:
+ 667               		.cfi_def_cfa_offset 3
+ 668               		.cfi_offset 28, -2
+ 669               	/* prologue: function */
+ 670               	/* frame size = 0 */
+ 671               	/* stack size = 1 */
+ 672               	.L__stack_usage = 1
+ 673 01ae C82F      		mov r28,r24
+ 506:src/lcd.c     **** #if LCD_IO_MODE
+ 507:src/lcd.c     ****     /*
+ 508:src/lcd.c     ****      *  Initialize LCD to 4 bit I/O mode
+ 509:src/lcd.c     ****      */
+ 510:src/lcd.c     ****      
+ 511:src/lcd.c     ****     if ( ( &LCD_DATA0_PORT == &LCD_DATA1_PORT) && ( &LCD_DATA1_PORT == &LCD_DATA2_PORT ) && ( &LCD_
+ 512:src/lcd.c     ****       && ( &LCD_RS_PORT == &LCD_DATA0_PORT) && ( &LCD_RW_PORT == &LCD_DATA0_PORT) && (&LCD_E_PORT =
+ 513:src/lcd.c     ****       && (LCD_DATA0_PIN == 0 ) && (LCD_DATA1_PIN == 1) && (LCD_DATA2_PIN == 2) && (LCD_DATA3_PIN ==
+ 514:src/lcd.c     ****       && (LCD_RS_PIN == 4 ) && (LCD_RW_PIN == 5) && (LCD_E_PIN == 6 ) )
+ 515:src/lcd.c     ****     {
+ 516:src/lcd.c     ****         /* configure all port bits as output (all LCD lines on same port) */
+ 517:src/lcd.c     ****         DDR(LCD_DATA0_PORT) |= 0x7F;
+ 518:src/lcd.c     ****     }
+ 519:src/lcd.c     ****     else if ( ( &LCD_DATA0_PORT == &LCD_DATA1_PORT) && ( &LCD_DATA1_PORT == &LCD_DATA2_PORT ) && ( 
+ 520:src/lcd.c     ****            && (LCD_DATA0_PIN == 0 ) && (LCD_DATA1_PIN == 1) && (LCD_DATA2_PIN == 2) && (LCD_DATA3_P
+ 521:src/lcd.c     ****     {
+ 522:src/lcd.c     ****         /* configure all port bits as output (all LCD data lines on same port, but control lines on
+ 523:src/lcd.c     ****         DDR(LCD_DATA0_PORT) |= 0x0F;
+ 524:src/lcd.c     ****         DDR(LCD_RS_PORT)    |= _BV(LCD_RS_PIN);
+ 525:src/lcd.c     ****         DDR(LCD_RW_PORT)    |= _BV(LCD_RW_PIN);
+ 526:src/lcd.c     ****         DDR(LCD_E_PORT)     |= _BV(LCD_E_PIN);
+ 527:src/lcd.c     ****     }
+ 528:src/lcd.c     ****     else
+ 529:src/lcd.c     ****     {
+ 530:src/lcd.c     ****         /* configure all port bits as output (LCD data and control lines on different ports */
+ 531:src/lcd.c     ****         DDR(LCD_RS_PORT)    |= _BV(LCD_RS_PIN);
+ 674               		.loc 1 531 0
+ 675 01b0 209A      		sbi 0x4,0
+ 532:src/lcd.c     ****         DDR(LCD_RW_PORT)    |= _BV(LCD_RW_PIN);
+ 676               		.loc 1 532 0
+ 677 01b2 269A      		sbi 0x4,6
+ 533:src/lcd.c     ****         DDR(LCD_E_PORT)     |= _BV(LCD_E_PIN);
+ 678               		.loc 1 533 0
+ 679 01b4 219A      		sbi 0x4,1
+ 534:src/lcd.c     ****         DDR(LCD_DATA0_PORT) |= _BV(LCD_DATA0_PIN);
+ 680               		.loc 1 534 0
+ 681 01b6 229A      		sbi 0x4,2
+ 535:src/lcd.c     ****         DDR(LCD_DATA1_PORT) |= _BV(LCD_DATA1_PIN);
+ 682               		.loc 1 535 0
+ 683 01b8 239A      		sbi 0x4,3
+ 536:src/lcd.c     ****         DDR(LCD_DATA2_PORT) |= _BV(LCD_DATA2_PIN);
+ 684               		.loc 1 536 0
+ 685 01ba 249A      		sbi 0x4,4
+ 537:src/lcd.c     ****         DDR(LCD_DATA3_PORT) |= _BV(LCD_DATA3_PIN);
+ 686               		.loc 1 537 0
+ 687 01bc 259A      		sbi 0x4,5
+ 688               	.LVL71:
+ 689               	.LBB45:
+ 690               	.LBB46:
+ 691               		.loc 2 245 0
+ 692 01be 8FEF      		ldi r24,lo8(-1537)
+ 693 01c0 99EF      		ldi r25,hi8(-1537)
+ 694 01c2 0197      	1:	sbiw r24,1
+ 695 01c4 01F4      		brne 1b
+ 696               	.LVL72:
+ 697 01c6 00C0      		rjmp .
+ 698 01c8 0000      		nop
+ 699               	.LBE46:
+ 700               	.LBE45:
+ 538:src/lcd.c     ****     }
+ 539:src/lcd.c     ****     delay(LCD_DELAY_BOOTUP);             /* wait 16ms or more after power-on       */
+ 540:src/lcd.c     ****     
+ 541:src/lcd.c     ****     /* initial write to lcd is 8bit */
+ 542:src/lcd.c     ****     LCD_DATA1_PORT |= _BV(LCD_DATA1_PIN);    // LCD_FUNCTION>>4;
+ 701               		.loc 1 542 0
+ 702 01ca 2B9A      		sbi 0x5,3
+ 543:src/lcd.c     ****     LCD_DATA0_PORT |= _BV(LCD_DATA0_PIN);    // LCD_FUNCTION_8BIT>>4;
+ 703               		.loc 1 543 0
+ 704 01cc 2A9A      		sbi 0x5,2
+ 544:src/lcd.c     ****     lcd_e_toggle();
+ 705               		.loc 1 544 0
+ 706 01ce 0E94 0000 		call toggle_e
+ 707               	.LVL73:
+ 708               	.LBB47:
+ 709               	.LBB48:
+ 710               		.loc 2 245 0
+ 711 01d2 8FE1      		ldi r24,lo8(19999)
+ 712 01d4 9EE4      		ldi r25,hi8(19999)
+ 713 01d6 0197      	1:	sbiw r24,1
+ 714 01d8 01F4      		brne 1b
+ 715 01da 00C0      		rjmp .
+ 716 01dc 0000      		nop
+ 717               	.LBE48:
+ 718               	.LBE47:
+ 545:src/lcd.c     ****     delay(LCD_DELAY_INIT);               /* delay, busy flag can't be checked here */
+ 546:src/lcd.c     ****    
+ 547:src/lcd.c     ****     /* repeat last command */ 
+ 548:src/lcd.c     ****     lcd_e_toggle();      
+ 719               		.loc 1 548 0
+ 720 01de 0E94 0000 		call toggle_e
+ 721               	.LVL74:
+ 722               	.LBB49:
+ 723               	.LBB50:
+ 724               		.loc 2 245 0
+ 725 01e2 8FEF      		ldi r24,lo8(255)
+ 726 01e4 90E0      		ldi r25,hi8(255)
+ 727 01e6 0197      	1:	sbiw r24,1
+ 728 01e8 01F4      		brne 1b
+ 729 01ea 00C0      		rjmp .
+ 730 01ec 0000      		nop
+ 731               	.LBE50:
+ 732               	.LBE49:
+ 549:src/lcd.c     ****     delay(LCD_DELAY_INIT_REP);           /* delay, busy flag can't be checked here */
+ 550:src/lcd.c     ****     
+ 551:src/lcd.c     ****     /* repeat last command a third time */
+ 552:src/lcd.c     ****     lcd_e_toggle();      
+ 733               		.loc 1 552 0
+ 734 01ee 0E94 0000 		call toggle_e
+ 735               	.LVL75:
+ 736               	.LBB51:
+ 737               	.LBB52:
+ 738               		.loc 2 245 0
+ 739 01f2 8FEF      		ldi r24,lo8(255)
+ 740 01f4 90E0      		ldi r25,hi8(255)
+ 741 01f6 0197      	1:	sbiw r24,1
+ 742 01f8 01F4      		brne 1b
+ 743 01fa 00C0      		rjmp .
+ 744 01fc 0000      		nop
+ 745               	.LBE52:
+ 746               	.LBE51:
+ 553:src/lcd.c     ****     delay(LCD_DELAY_INIT_REP);           /* delay, busy flag can't be checked here */
+ 554:src/lcd.c     **** 
+ 555:src/lcd.c     ****     /* now configure for 4bit mode */
+ 556:src/lcd.c     ****     LCD_DATA0_PORT &= ~_BV(LCD_DATA0_PIN);   // LCD_FUNCTION_4BIT_1LINE>>4
+ 747               		.loc 1 556 0
+ 748 01fe 2A98      		cbi 0x5,2
+ 557:src/lcd.c     ****     lcd_e_toggle();
+ 749               		.loc 1 557 0
+ 750 0200 0E94 0000 		call toggle_e
+ 751               	.LVL76:
+ 752               	.LBB53:
+ 753               	.LBB54:
+ 754               		.loc 2 245 0
+ 755 0204 8FEF      		ldi r24,lo8(255)
+ 756 0206 90E0      		ldi r25,hi8(255)
+ 757 0208 0197      	1:	sbiw r24,1
+ 758 020a 01F4      		brne 1b
+ 759 020c 00C0      		rjmp .
+ 760 020e 0000      		nop
+ 761               	.LBE54:
+ 762               	.LBE53:
+ 558:src/lcd.c     ****     delay(LCD_DELAY_INIT_4BIT);          /* some displays need this additional delay */
+ 559:src/lcd.c     ****     
+ 560:src/lcd.c     ****     /* from now the LCD only accepts 4 bit I/O, we can use lcd_command() */    
+ 561:src/lcd.c     **** #else
+ 562:src/lcd.c     ****     /*
+ 563:src/lcd.c     ****      * Initialize LCD to 8 bit memory mapped mode
+ 564:src/lcd.c     ****      */
+ 565:src/lcd.c     ****     
+ 566:src/lcd.c     ****     /* enable external SRAM (memory mapped lcd) and one wait state */        
+ 567:src/lcd.c     ****     MCUCR = _BV(SRE) | _BV(SRW);
+ 568:src/lcd.c     **** 
+ 569:src/lcd.c     ****     /* reset LCD */
+ 570:src/lcd.c     ****     delay(LCD_DELAY_BOOTUP);                    /* wait 16ms after power-on     */
+ 571:src/lcd.c     ****     lcd_write(LCD_FUNCTION_8BIT_1LINE,0);   /* function set: 8bit interface */                   
+ 572:src/lcd.c     ****     delay(LCD_DELAY_INIT);                      /* wait 5ms                     */
+ 573:src/lcd.c     ****     lcd_write(LCD_FUNCTION_8BIT_1LINE,0);   /* function set: 8bit interface */                 
+ 574:src/lcd.c     ****     delay(LCD_DELAY_INIT_REP);                  /* wait 64us                    */
+ 575:src/lcd.c     ****     lcd_write(LCD_FUNCTION_8BIT_1LINE,0);   /* function set: 8bit interface */                
+ 576:src/lcd.c     ****     delay(LCD_DELAY_INIT_REP);                  /* wait 64us                    */
+ 577:src/lcd.c     **** #endif
+ 578:src/lcd.c     **** 
+ 579:src/lcd.c     **** #if KS0073_4LINES_MODE
+ 580:src/lcd.c     ****     /* Display with KS0073 controller requires special commands for enabling 4 line mode */
+ 581:src/lcd.c     **** 	lcd_command(KS0073_EXTENDED_FUNCTION_REGISTER_ON);
+ 582:src/lcd.c     **** 	lcd_command(KS0073_4LINES_MODE);
+ 583:src/lcd.c     **** 	lcd_command(KS0073_EXTENDED_FUNCTION_REGISTER_OFF);
+ 584:src/lcd.c     **** #else
+ 585:src/lcd.c     ****     lcd_command(LCD_FUNCTION_DEFAULT);      /* function set: display lines  */
+ 763               		.loc 1 585 0
+ 764 0210 88E2      		ldi r24,lo8(40)
+ 765 0212 0E94 0000 		call lcd_command
+ 766               	.LVL77:
+ 586:src/lcd.c     **** #endif
+ 587:src/lcd.c     ****     lcd_command(LCD_DISP_OFF);              /* display off                  */
+ 767               		.loc 1 587 0
+ 768 0216 88E0      		ldi r24,lo8(8)
+ 769 0218 0E94 0000 		call lcd_command
+ 770               	.LVL78:
+ 588:src/lcd.c     ****     lcd_clrscr();                           /* display clear                */ 
+ 771               		.loc 1 588 0
+ 772 021c 0E94 0000 		call lcd_clrscr
+ 773               	.LVL79:
+ 589:src/lcd.c     ****     lcd_command(LCD_MODE_DEFAULT);          /* set entry mode               */
+ 774               		.loc 1 589 0
+ 775 0220 86E0      		ldi r24,lo8(6)
+ 776 0222 0E94 0000 		call lcd_command
+ 777               	.LVL80:
+ 590:src/lcd.c     ****     lcd_command(dispAttr);                  /* display/cursor control       */
+ 778               		.loc 1 590 0
+ 779 0226 8C2F      		mov r24,r28
+ 780               	/* epilogue start */
+ 591:src/lcd.c     **** 
+ 592:src/lcd.c     **** }/* lcd_init */
+ 781               		.loc 1 592 0
+ 782 0228 CF91      		pop r28
+ 783               	.LVL81:
+ 590:src/lcd.c     ****     lcd_command(dispAttr);                  /* display/cursor control       */
+ 784               		.loc 1 590 0
+ 785 022a 0C94 0000 		jmp lcd_command
+ 786               	.LVL82:
+ 787               		.cfi_endproc
+ 788               	.LFE21:
+ 790               	.Letext0:
+ 791               		.file 3 "/usr/lib/avr/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 lcd.c
+     /tmp/ccG0y6Aq.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccG0y6Aq.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccG0y6Aq.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccG0y6Aq.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccG0y6Aq.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccG0y6Aq.s:11     .text:0000000000000000 toggle_e
+     /tmp/ccG0y6Aq.s:40     .text:000000000000000e lcd_write
+     /tmp/ccG0y6Aq.s:166    .text:0000000000000078 lcd_read.constprop.0
+     /tmp/ccG0y6Aq.s:277    .text:00000000000000cc lcd_waitbusy
+     /tmp/ccG0y6Aq.s:310    .text:00000000000000e0 lcd_command
+     /tmp/ccG0y6Aq.s:342    .text:00000000000000f2 lcd_data
+     /tmp/ccG0y6Aq.s:374    .text:0000000000000104 lcd_gotoxy
+     /tmp/ccG0y6Aq.s:421    .text:0000000000000122 lcd_getxy
+     /tmp/ccG0y6Aq.s:440    .text:000000000000012a lcd_clrscr
+     /tmp/ccG0y6Aq.s:457    .text:0000000000000130 lcd_home
+     /tmp/ccG0y6Aq.s:474    .text:0000000000000136 lcd_putc
+     /tmp/ccG0y6Aq.s:565    .text:0000000000000176 lcd_puts
+     /tmp/ccG0y6Aq.s:607    .text:000000000000018e lcd_puts_p
+     /tmp/ccG0y6Aq.s:660    .text:00000000000001ac lcd_init
+
+NO UNDEFINED SYMBOLS

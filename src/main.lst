@@ -1,0 +1,2492 @@
+   1               		.file	"main.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	store_clear
+  12               	store_clear:
+  13               	.LFB10:
+  14               		.file 1 "src/main.c"
+   1:src/main.c    **** #include <avr/interrupt.h>
+   2:src/main.c    **** #include <avr/io.h>
+   3:src/main.c    **** #include <avr/eeprom.h>
+   4:src/main.c    **** #include <stdio.h>
+   5:src/main.c    **** #include <util/delay.h>
+   6:src/main.c    **** #include "lcd.h"
+   7:src/main.c    **** #include "dmx.h"
+   8:src/main.c    **** #include "adc.h"
+   9:src/main.c    **** #include "hardware.h"
+  10:src/main.c    **** 
+  11:src/main.c    **** 
+  12:src/main.c    **** 
+  13:src/main.c    **** typedef enum {
+  14:src/main.c    **** 	MENU_SPLASH =0,
+  15:src/main.c    **** 	MENU_MAIN = 1,
+  16:src/main.c    **** 	MENU_SETUP = 2,
+  17:src/main.c    **** 	MENU_EDIT_CAM = 3,
+  18:src/main.c    **** 	MENU_STORE = 4,
+  19:src/main.c    **** 	MENU_CLEAR = 5,
+  20:src/main.c    **** 	MENU_INVALID = 255
+  21:src/main.c    **** } menu_identifiers;
+  22:src/main.c    **** 
+  23:src/main.c    **** typedef void(*menu_button)(void);
+  24:src/main.c    **** typedef void(*init_function)(void);
+  25:src/main.c    **** 
+  26:src/main.c    **** typedef struct
+  27:src/main.c    **** {
+  28:src/main.c    **** 	char* lines[4];
+  29:src/main.c    **** 	menu_identifiers next[4];
+  30:src/main.c    **** 	menu_button cb[4];
+  31:src/main.c    **** 	init_function init;
+  32:src/main.c    **** 	
+  33:src/main.c    **** } menu_t;
+  34:src/main.c    **** 
+  35:src/main.c    **** void setup_cam_up(void);
+  36:src/main.c    **** void setup_cam_down(void);
+  37:src/main.c    **** void setup_show_cam(void);
+  38:src/main.c    **** void param_next(void);
+  39:src/main.c    **** void param_up(void);
+  40:src/main.c    **** void param_down(void);
+  41:src/main.c    **** void param_show(void);
+  42:src/main.c    **** void param_resetId(void);
+  43:src/main.c    **** void main_show(void);
+  44:src/main.c    **** void store_clear(void);
+  45:src/main.c    **** void save_data(void);
+  46:src/main.c    **** 
+  47:src/main.c    **** menu_t menues[] =
+  48:src/main.c    **** { 	
+  49:src/main.c    **** 	{ //MENU_SPLASH
+  50:src/main.c    **** 		.lines = { "DragonVideo        ","By Karrn            ","Cam controller      ","                2
+  51:src/main.c    **** 		.next =  { MENU_MAIN,MENU_MAIN,MENU_MAIN,MENU_MAIN},
+  52:src/main.c    **** 		.cb =    { NULL,NULL,NULL,NULL},
+  53:src/main.c    **** 		.init =  NULL
+  54:src/main.c    ****     },
+  55:src/main.c    **** 	{ //MENU_MAIN
+  56:src/main.c    **** 		.lines = { "DragonVideo        ","                    ","                    ","STORE          SE
+  57:src/main.c    **** 		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_SETUP},
+  58:src/main.c    **** 		.cb    = { NULL,NULL,NULL,NULL},
+  59:src/main.c    **** 		.init  = main_show
+  60:src/main.c    **** 	},
+  61:src/main.c    **** 	{ //MENU_SETUP
+  62:src/main.c    **** 		.lines = { "Setup              ","                    ","                    ","PREV NEXT MOD.  B
+  63:src/main.c    **** 		.next  = { MENU_INVALID,MENU_INVALID,MENU_EDIT_CAM,MENU_MAIN},
+  64:src/main.c    **** 		.cb    = { setup_cam_down,setup_cam_up,param_resetId,save_data},
+  65:src/main.c    **** 		.init =  setup_show_cam
+  66:src/main.c    **** 	},
+  67:src/main.c    **** 	{ //MENU_EDIT_CAM
+  68:src/main.c    **** 		.lines = { "Setup              ","                    ","                    ","NEXT UP   DOWN  B
+  69:src/main.c    **** 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_SETUP},
+  70:src/main.c    **** 		.cb    = { param_next,param_up, param_down, NULL},
+  71:src/main.c    **** 		.init  = param_show
+  72:src/main.c    **** 	},
+  73:src/main.c    **** 	{ //MENU_STORE
+  74:src/main.c    **** 		.lines = { "Store              ","Choose store to save","                    ","     CLEAR     AB
+  75:src/main.c    **** 		.next  = { MENU_INVALID,MENU_CLEAR,MENU_INVALID,MENU_MAIN},
+  76:src/main.c    **** 		.cb    = { NULL,NULL, NULL, NULL},
+  77:src/main.c    **** 		.init  = NULL
+  78:src/main.c    **** 	},
+  79:src/main.c    **** 	{ //MENU_CLEAR
+  80:src/main.c    **** 		.lines = { "Clear store        ","Choose store        ","                    ","ALL            AB
+  81:src/main.c    **** 		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN},
+  82:src/main.c    **** 		.cb    = { store_clear,NULL, NULL, NULL},
+  83:src/main.c    **** 		.init  = NULL
+  84:src/main.c    **** 	}
+  85:src/main.c    **** };
+  86:src/main.c    **** 
+  87:src/main.c    **** 
+  88:src/main.c    **** 
+  89:src/main.c    **** menu_identifiers active_menu;
+  90:src/main.c    **** void set_menu(menu_identifiers menu);
+  91:src/main.c    **** void process_menu(void);
+  92:src/main.c    **** void process_inputs(void);
+  93:src/main.c    **** 
+  94:src/main.c    **** 
+  95:src/main.c    **** 
+  96:src/main.c    **** #define PARAM_COUNT 5
+  97:src/main.c    **** #define CAM_COUNT 4
+  98:src/main.c    **** #define STORE_COUNT 4
+  99:src/main.c    **** typedef struct  {
+ 100:src/main.c    **** 	uint16_t base_addr;
+ 101:src/main.c    **** 	uint16_t pan_address;
+ 102:src/main.c    **** 	uint16_t tilt_address;
+ 103:src/main.c    **** 	uint16_t pan_invert;
+ 104:src/main.c    **** 	uint16_t tilt_invert;
+ 105:src/main.c    **** 	uint8_t pan;
+ 106:src/main.c    **** 	uint8_t tilt;
+ 107:src/main.c    **** 
+ 108:src/main.c    **** 	uint16_t store_pan[STORE_COUNT];
+ 109:src/main.c    **** 	uint16_t store_tilt[STORE_COUNT];
+ 110:src/main.c    **** } cam_data_t;
+ 111:src/main.c    **** 
+ 112:src/main.c    **** cam_data_t cams[CAM_COUNT];
+ 113:src/main.c    **** cam_data_t backup_cams[CAM_COUNT] EEMEM;
+ 114:src/main.c    **** 
+ 115:src/main.c    **** 
+ 116:src/main.c    **** uint8_t active_cam;
+ 117:src/main.c    **** 
+ 118:src/main.c    **** 
+ 119:src/main.c    **** 
+ 120:src/main.c    **** //Hauptprogramm
+ 121:src/main.c    **** int main (void) 
+ 122:src/main.c    **** {  
+ 123:src/main.c    **** 	
+ 124:src/main.c    **** 	hardware_init();
+ 125:src/main.c    **** 	eeprom_read_block (cams, backup_cams, sizeof(cams));
+ 126:src/main.c    **** 
+ 127:src/main.c    **** 	lcd_init(LCD_DISP_ON);
+ 128:src/main.c    **** 	set_menu(MENU_SPLASH);
+ 129:src/main.c    **** 	dmx_init();
+ 130:src/main.c    **** 	ADC_Init();
+ 131:src/main.c    **** 
+ 132:src/main.c    **** 	uint16_t blink_counter=0;
+ 133:src/main.c    **** 	while(1)
+ 134:src/main.c    **** 	{
+ 135:src/main.c    **** 		blink_counter++;
+ 136:src/main.c    **** 		process_inputs();
+ 137:src/main.c    **** 		process_menu();
+ 138:src/main.c    **** 		_delay_ms(5);
+ 139:src/main.c    **** 
+ 140:src/main.c    **** 		if((active_menu == MENU_STORE || active_menu == MENU_CLEAR) && blink_counter % 20 == 0)
+ 141:src/main.c    **** 		{
+ 142:src/main.c    **** 			for(int i=0; i < STORE_COUNT; i++)
+ 143:src/main.c    **** 				reset_store_led(i);
+ 144:src/main.c    **** 		}
+ 145:src/main.c    **** 
+ 146:src/main.c    **** 		if((active_menu == MENU_STORE || active_menu == MENU_CLEAR )&& blink_counter % 40 == 0)
+ 147:src/main.c    **** 		{
+ 148:src/main.c    **** 			for(int i=0; i < STORE_COUNT; i++)
+ 149:src/main.c    **** 				set_store_led(i);
+ 150:src/main.c    **** 		}
+ 151:src/main.c    **** 	}
+ 152:src/main.c    **** }
+ 153:src/main.c    **** 
+ 154:src/main.c    **** 
+ 155:src/main.c    **** 
+ 156:src/main.c    **** 
+ 157:src/main.c    **** void process_inputs(void)
+ 158:src/main.c    **** {
+ 159:src/main.c    **** 	camkey_t keys = get_camkeys();
+ 160:src/main.c    **** 
+ 161:src/main.c    **** 	switch(keys)
+ 162:src/main.c    **** 	{
+ 163:src/main.c    **** 		case CAM1: active_cam = 0; break;
+ 164:src/main.c    **** 		case CAM2: active_cam = 1; break;
+ 165:src/main.c    **** 		case CAM3: active_cam = 2; break;
+ 166:src/main.c    **** 		case CAM4: active_cam = 3; break;
+ 167:src/main.c    **** 		default: break;
+ 168:src/main.c    **** 	}
+ 169:src/main.c    **** 
+ 170:src/main.c    **** 
+ 171:src/main.c    **** 	set_cam_leds(active_cam);
+ 172:src/main.c    **** 
+ 173:src/main.c    **** 	if( ! (active_menu == MENU_STORE || active_menu == MENU_CLEAR))
+ 174:src/main.c    **** 	{
+ 175:src/main.c    **** 		for(int i=0; i < STORE_COUNT; i++)
+ 176:src/main.c    **** 		{
+ 177:src/main.c    **** 			if(cams[active_cam].store_pan[i]!= 0xFFFF && cams[active_cam].store_tilt[i]!= 0xFFFF)
+ 178:src/main.c    **** 			{
+ 179:src/main.c    **** 				set_store_led(i);
+ 180:src/main.c    **** 			}
+ 181:src/main.c    **** 			else
+ 182:src/main.c    **** 			{
+ 183:src/main.c    **** 				reset_store_led(i);
+ 184:src/main.c    **** 			}
+ 185:src/main.c    **** 		}
+ 186:src/main.c    **** 	}
+ 187:src/main.c    **** 
+ 188:src/main.c    **** 	if(keys != CAM_NO_KEY)
+ 189:src/main.c    **** 	{
+ 190:src/main.c    **** 		if(active_menu == MENU_MAIN)
+ 191:src/main.c    **** 			main_show();
+ 192:src/main.c    **** 
+ 193:src/main.c    **** 	}
+ 194:src/main.c    **** 	
+ 195:src/main.c    **** 	int16_t diff = axis_offset(0);
+ 196:src/main.c    **** 
+ 197:src/main.c    **** 	if(cams[active_cam].pan_invert)
+ 198:src/main.c    **** 	{
+ 199:src/main.c    **** 		diff=-diff;
+ 200:src/main.c    **** 	}
+ 201:src/main.c    **** 
+ 202:src/main.c    **** 	uint8_t old_pan = cams[active_cam].pan;
+ 203:src/main.c    **** 	if( (int16_t)cams[active_cam].pan+diff > 255)
+ 204:src/main.c    **** 		cams[active_cam].pan=255;
+ 205:src/main.c    **** 	else if( (int16_t)cams[active_cam].pan+diff < 0)
+ 206:src/main.c    **** 		cams[active_cam].pan=0;
+ 207:src/main.c    **** 	else
+ 208:src/main.c    **** 		cams[active_cam].pan+=diff	;
+ 209:src/main.c    **** 
+ 210:src/main.c    **** 	diff = -axis_offset(1);
+ 211:src/main.c    **** 
+ 212:src/main.c    **** 	if(cams[active_cam].tilt_invert)
+ 213:src/main.c    **** 	{
+ 214:src/main.c    **** 		diff=-diff;
+ 215:src/main.c    **** 	}
+ 216:src/main.c    **** 
+ 217:src/main.c    **** 	uint8_t old_tilt = cams[active_cam].tilt;
+ 218:src/main.c    **** 	if( (int16_t)cams[active_cam].tilt+diff > 255)
+ 219:src/main.c    **** 		cams[active_cam].tilt=255;
+ 220:src/main.c    **** 	else if( (int16_t)cams[active_cam].tilt+diff < 0)
+ 221:src/main.c    **** 		cams[active_cam].tilt=0;
+ 222:src/main.c    **** 	else
+ 223:src/main.c    **** 		cams[active_cam].tilt+=diff	;
+ 224:src/main.c    **** 
+ 225:src/main.c    **** 	
+ 226:src/main.c    **** 
+ 227:src/main.c    **** 	
+ 228:src/main.c    **** 	storekey_t store = get_storekeys();
+ 229:src/main.c    **** 
+ 230:src/main.c    **** 	if(store != STORE_NO_KEY)
+ 231:src/main.c    **** 	{
+ 232:src/main.c    **** 		uint8_t store_id=0;
+ 233:src/main.c    **** 
+ 234:src/main.c    **** 		switch(store)
+ 235:src/main.c    **** 		{
+ 236:src/main.c    **** 			case STORE1: store_id = 0; break;
+ 237:src/main.c    **** 			case STORE2: store_id = 1; break;
+ 238:src/main.c    **** 			case STORE3: store_id = 2; break;
+ 239:src/main.c    **** 			case STORE4: store_id = 3; break;
+ 240:src/main.c    **** 			default: break;
+ 241:src/main.c    **** 		}
+ 242:src/main.c    **** 
+ 243:src/main.c    **** 
+ 244:src/main.c    **** 		if(active_menu == MENU_STORE)
+ 245:src/main.c    **** 		{
+ 246:src/main.c    **** 			cams[active_cam].store_pan[store_id] = cams[active_cam].pan;
+ 247:src/main.c    **** 			cams[active_cam].store_tilt[store_id] = cams[active_cam].tilt;
+ 248:src/main.c    **** 			//lcd_gotoxy(0,0);
+ 249:src/main.c    **** 			//lcd_puts("stored values");
+ 250:src/main.c    **** 			save_data();
+ 251:src/main.c    **** 			set_menu(MENU_MAIN);
+ 252:src/main.c    **** 		}
+ 253:src/main.c    **** 		else if(active_menu == MENU_CLEAR)
+ 254:src/main.c    **** 		{
+ 255:src/main.c    **** 			cams[active_cam].store_pan[store_id]=0xFFFF;
+ 256:src/main.c    **** 			cams[active_cam].store_tilt[store_id]=0xFFFF;
+ 257:src/main.c    **** 			save_data();
+ 258:src/main.c    **** 		}
+ 259:src/main.c    **** 		else
+ 260:src/main.c    **** 		{
+ 261:src/main.c    **** 			if(cams[active_cam].store_pan[store_id]!= 0xFFFF &&  cams[active_cam].store_tilt[store_id] != 0x
+ 262:src/main.c    **** 			{
+ 263:src/main.c    **** 				cams[active_cam].pan = cams[active_cam].store_pan[store_id]; 
+ 264:src/main.c    **** 				cams[active_cam].tilt = cams[active_cam].store_tilt[store_id];
+ 265:src/main.c    **** 				//lcd_gotoxy(0,0);
+ 266:src/main.c    **** 				//lcd_puts("loaded values");
+ 267:src/main.c    **** 				//char tmp[10];
+ 268:src/main.c    **** 				//itoa(store_id,tmp,10);
+ 269:src/main.c    **** 				//lcd_puts(tmp);
+ 270:src/main.c    **** 			}
+ 271:src/main.c    **** 		}
+ 272:src/main.c    **** 
+ 273:src/main.c    **** 	}
+ 274:src/main.c    **** 
+ 275:src/main.c    **** 	if(old_tilt != cams[active_cam].tilt || old_pan != cams[active_cam].pan)
+ 276:src/main.c    **** 	{
+ 277:src/main.c    **** 		write_dmx(cams[active_cam].base_addr + cams[active_cam].pan_address, cams[active_cam].pan);
+ 278:src/main.c    **** 		write_dmx(cams[active_cam].base_addr + cams[active_cam].tilt_address, cams[active_cam].tilt);
+ 279:src/main.c    **** 
+ 280:src/main.c    **** 		if(active_menu == MENU_MAIN)
+ 281:src/main.c    **** 			main_show();
+ 282:src/main.c    **** 	}	
+ 283:src/main.c    **** 
+ 284:src/main.c    **** }
+ 285:src/main.c    **** 
+ 286:src/main.c    **** void store_clear(void)
+ 287:src/main.c    **** {
+  15               		.loc 1 287 0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  21               	.LVL0:
+  22               	.LBB6:
+ 288:src/main.c    **** 	for(uint8_t i=0; i < STORE_COUNT; i++)
+ 289:src/main.c    **** 	{
+ 290:src/main.c    **** 		cams[active_cam].store_pan[i] = 0xFFFF;
+  23               		.loc 1 290 0
+  24 0000 E091 0000 		lds r30,active_cam
+  25 0004 8CE1      		ldi r24,lo8(28)
+  26 0006 E89F      		mul r30,r24
+  27 0008 F001      		movw r30,r0
+  28 000a 1124      		clr __zero_reg__
+  29 000c E050      		subi r30,lo8(-(cams))
+  30 000e F040      		sbci r31,hi8(-(cams))
+  31 0010 8FEF      		ldi r24,lo8(-1)
+  32 0012 9FEF      		ldi r25,lo8(-1)
+  33 0014 9587      		std Z+13,r25
+  34 0016 8487      		std Z+12,r24
+ 291:src/main.c    **** 		cams[active_cam].store_tilt[i] = 0xFFFF;
+  35               		.loc 1 291 0
+  36 0018 958B      		std Z+21,r25
+  37 001a 848B      		std Z+20,r24
+  38               	.LVL1:
+ 290:src/main.c    **** 		cams[active_cam].store_tilt[i] = 0xFFFF;
+  39               		.loc 1 290 0
+  40 001c 9787      		std Z+15,r25
+  41 001e 8687      		std Z+14,r24
+  42               		.loc 1 291 0
+  43 0020 978B      		std Z+23,r25
+  44 0022 868B      		std Z+22,r24
+  45               	.LVL2:
+ 290:src/main.c    **** 		cams[active_cam].store_tilt[i] = 0xFFFF;
+  46               		.loc 1 290 0
+  47 0024 918B      		std Z+17,r25
+  48 0026 808B      		std Z+16,r24
+  49               		.loc 1 291 0
+  50 0028 918F      		std Z+25,r25
+  51 002a 808F      		std Z+24,r24
+  52               	.LVL3:
+ 290:src/main.c    **** 		cams[active_cam].store_tilt[i] = 0xFFFF;
+  53               		.loc 1 290 0
+  54 002c 938B      		std Z+19,r25
+  55 002e 828B      		std Z+18,r24
+  56               		.loc 1 291 0
+  57 0030 938F      		std Z+27,r25
+  58 0032 828F      		std Z+26,r24
+  59               	.LVL4:
+  60 0034 0895      		ret
+  61               	.LBE6:
+  62               		.cfi_endproc
+  63               	.LFE10:
+  65               	.global	param_resetId
+  67               	param_resetId:
+  68               	.LFB21:
+ 292:src/main.c    **** 	}
+ 293:src/main.c    **** }
+ 294:src/main.c    **** 
+ 295:src/main.c    **** void main_show(void)
+ 296:src/main.c    **** {
+ 297:src/main.c    **** 	lcd_gotoxy(0,1);
+ 298:src/main.c    **** 	lcd_puts("Active: CAM ");
+ 299:src/main.c    **** 	char tmp[21];
+ 300:src/main.c    **** 	itoa(active_cam+1,tmp,10);
+ 301:src/main.c    **** 	lcd_gotoxy(12,1);
+ 302:src/main.c    **** 	lcd_puts(tmp);
+ 303:src/main.c    **** 
+ 304:src/main.c    **** 	lcd_gotoxy(0,2);
+ 305:src/main.c    **** 	sprintf(tmp,"Pan: %3d Tilt: %3d", cams[active_cam].pan, cams[active_cam].tilt);
+ 306:src/main.c    **** 	lcd_puts(tmp);
+ 307:src/main.c    **** }	
+ 308:src/main.c    **** 
+ 309:src/main.c    **** void process_menu(void)
+ 310:src/main.c    **** {
+ 311:src/main.c    **** 	softkey_t button = get_softkeys();
+ 312:src/main.c    **** 
+ 313:src/main.c    **** 	if(button != NO_KEY )
+ 314:src/main.c    **** 	{
+ 315:src/main.c    **** 		if(menues[active_menu].cb[button] != NULL)
+ 316:src/main.c    **** 				menues[active_menu].cb[button]();	
+ 317:src/main.c    **** 
+ 318:src/main.c    **** 		if(menues[active_menu].next[button] != MENU_INVALID)
+ 319:src/main.c    **** 			set_menu(menues[active_menu].next[button]);
+ 320:src/main.c    **** 	
+ 321:src/main.c    **** 					
+ 322:src/main.c    **** 
+ 323:src/main.c    **** 	}	
+ 324:src/main.c    **** }
+ 325:src/main.c    **** 
+ 326:src/main.c    **** void set_menu(menu_identifiers menu)
+ 327:src/main.c    **** {
+ 328:src/main.c    **** 	active_menu = menu;
+ 329:src/main.c    **** 	lcd_clrscr();
+ 330:src/main.c    **** 	lcd_puts(menues[menu].lines[0]);
+ 331:src/main.c    **** 	lcd_gotoxy(0,1);
+ 332:src/main.c    **** 	lcd_puts(menues[menu].lines[1]);
+ 333:src/main.c    **** 	lcd_gotoxy(0,2);
+ 334:src/main.c    **** 	lcd_puts(menues[menu].lines[2]);
+ 335:src/main.c    **** 	lcd_gotoxy(0,3);
+ 336:src/main.c    **** 	lcd_puts(menues[menu].lines[3]);
+ 337:src/main.c    **** 
+ 338:src/main.c    **** 	if(menues[menu].init)
+ 339:src/main.c    **** 		menues[menu].init();
+ 340:src/main.c    **** 
+ 341:src/main.c    **** 
+ 342:src/main.c    **** }
+ 343:src/main.c    **** 
+ 344:src/main.c    **** uint8_t setup_active_cam=0;
+ 345:src/main.c    **** uint8_t param_id=0;
+ 346:src/main.c    **** uint16_t* changing_param;
+ 347:src/main.c    **** 
+ 348:src/main.c    **** void setup_show_cam(void)
+ 349:src/main.c    **** {
+ 350:src/main.c    **** 	lcd_gotoxy(0,1);
+ 351:src/main.c    **** 
+ 352:src/main.c    **** 	char tmp[10];
+ 353:src/main.c    **** 	itoa(setup_active_cam+1,tmp,10);
+ 354:src/main.c    **** 	lcd_puts("Edit Cam ");
+ 355:src/main.c    **** 	lcd_gotoxy(9,1);
+ 356:src/main.c    **** 	lcd_puts(tmp);
+ 357:src/main.c    **** }
+ 358:src/main.c    **** 
+ 359:src/main.c    **** void setup_cam_up(void)
+ 360:src/main.c    **** {
+ 361:src/main.c    **** 	setup_active_cam++;
+ 362:src/main.c    **** 
+ 363:src/main.c    **** 	if(setup_active_cam>= CAM_COUNT)
+ 364:src/main.c    **** 		setup_active_cam=0;
+ 365:src/main.c    **** 
+ 366:src/main.c    **** 	setup_show_cam();
+ 367:src/main.c    **** }
+ 368:src/main.c    **** 
+ 369:src/main.c    **** void setup_cam_down(void)
+ 370:src/main.c    **** {
+ 371:src/main.c    **** 	setup_active_cam--;
+ 372:src/main.c    **** 	if(setup_active_cam>= CAM_COUNT)
+ 373:src/main.c    **** 		setup_active_cam= CAM_COUNT-1;
+ 374:src/main.c    **** 
+ 375:src/main.c    **** 	setup_show_cam();
+ 376:src/main.c    **** }
+ 377:src/main.c    **** 
+ 378:src/main.c    **** void param_next(void)
+ 379:src/main.c    **** {
+ 380:src/main.c    **** 	param_id++;
+ 381:src/main.c    **** 
+ 382:src/main.c    **** 	if(param_id>=PARAM_COUNT)
+ 383:src/main.c    **** 		param_id=0;
+ 384:src/main.c    **** 
+ 385:src/main.c    **** 	param_show();
+ 386:src/main.c    **** }
+ 387:src/main.c    **** 
+ 388:src/main.c    **** void param_up(void)
+ 389:src/main.c    **** {
+ 390:src/main.c    **** 	(*changing_param)++;
+ 391:src/main.c    **** 	param_show();	
+ 392:src/main.c    **** }
+ 393:src/main.c    **** 
+ 394:src/main.c    **** void param_down(void)
+ 395:src/main.c    **** {
+ 396:src/main.c    **** 	(*changing_param)--;
+ 397:src/main.c    **** 	param_show();	
+ 398:src/main.c    **** }
+ 399:src/main.c    **** 
+ 400:src/main.c    **** void param_show(void)
+ 401:src/main.c    **** {
+ 402:src/main.c    **** 	lcd_gotoxy(14,0);
+ 403:src/main.c    **** 	lcd_puts("CAM ");
+ 404:src/main.c    **** 	char tmp[10];
+ 405:src/main.c    **** 	itoa(setup_active_cam+1,tmp,10);
+ 406:src/main.c    **** 	lcd_gotoxy(18,0);
+ 407:src/main.c    **** 	lcd_puts(tmp);
+ 408:src/main.c    **** 
+ 409:src/main.c    **** 
+ 410:src/main.c    **** 	lcd_gotoxy(0,1);
+ 411:src/main.c    **** 	char toDraw[20];
+ 412:src/main.c    **** 	switch(param_id)
+ 413:src/main.c    **** 	{
+ 414:src/main.c    **** 		case 0: lcd_puts("base_addr           "); 
+ 415:src/main.c    **** 				changing_param=&cams[setup_active_cam].base_addr;
+ 416:src/main.c    **** 		
+ 417:src/main.c    **** 				break;
+ 418:src/main.c    **** 		case 1: lcd_puts("pan offset          "); 
+ 419:src/main.c    **** 				changing_param=&cams[setup_active_cam].pan_address;
+ 420:src/main.c    **** 		
+ 421:src/main.c    **** 				break;
+ 422:src/main.c    **** 		case 2: lcd_puts("tilt offset         "); 
+ 423:src/main.c    **** 				changing_param=&cams[setup_active_cam].tilt_address;
+ 424:src/main.c    **** 				break;
+ 425:src/main.c    **** 		case 3: lcd_puts("invert pan          "); 
+ 426:src/main.c    **** 				changing_param=&cams[setup_active_cam].pan_invert;
+ 427:src/main.c    **** 				break;
+ 428:src/main.c    **** 		case 4: lcd_puts("invert tilt         "); 
+ 429:src/main.c    **** 				changing_param=&cams[setup_active_cam].tilt_invert;
+ 430:src/main.c    **** 				break;
+ 431:src/main.c    **** 		
+ 432:src/main.c    **** 	}
+ 433:src/main.c    **** 
+ 434:src/main.c    **** itoa(*changing_param,toDraw,10);
+ 435:src/main.c    **** 	lcd_gotoxy(0,2);
+ 436:src/main.c    **** 	lcd_puts("                 ");
+ 437:src/main.c    **** 	lcd_gotoxy(0,2);
+ 438:src/main.c    **** 	lcd_puts(toDraw);
+ 439:src/main.c    **** }
+ 440:src/main.c    **** 
+ 441:src/main.c    **** void param_resetId(void)
+ 442:src/main.c    **** {
+  69               		.loc 1 442 0
+  70               		.cfi_startproc
+  71               	/* prologue: function */
+  72               	/* frame size = 0 */
+  73               	/* stack size = 0 */
+  74               	.L__stack_usage = 0
+ 443:src/main.c    **** 	param_id=0;
+  75               		.loc 1 443 0
+  76 0036 1092 0000 		sts param_id,__zero_reg__
+  77 003a 0895      		ret
+  78               		.cfi_endproc
+  79               	.LFE21:
+  81               		.section	.rodata.str1.1,"aMS",@progbits,1
+  82               	.LC0:
+  83 0000 4564 6974 		.string	"Edit Cam "
+  83      2043 616D 
+  83      2000 
+  84               		.text
+  85               	.global	setup_show_cam
+  87               	setup_show_cam:
+  88               	.LFB14:
+ 349:src/main.c    **** 	lcd_gotoxy(0,1);
+  89               		.loc 1 349 0
+  90               		.cfi_startproc
+  91 003c CF93      		push r28
+  92               	.LCFI0:
+  93               		.cfi_def_cfa_offset 3
+  94               		.cfi_offset 28, -2
+  95 003e DF93      		push r29
+  96               	.LCFI1:
+  97               		.cfi_def_cfa_offset 4
+  98               		.cfi_offset 29, -3
+  99 0040 CDB7      		in r28,__SP_L__
+ 100 0042 DEB7      		in r29,__SP_H__
+ 101               	.LCFI2:
+ 102               		.cfi_def_cfa_register 28
+ 103 0044 2A97      		sbiw r28,10
+ 104               	.LCFI3:
+ 105               		.cfi_def_cfa_offset 14
+ 106 0046 0FB6      		in __tmp_reg__,__SREG__
+ 107 0048 F894      		cli
+ 108 004a DEBF      		out __SP_H__,r29
+ 109 004c 0FBE      		out __SREG__,__tmp_reg__
+ 110 004e CDBF      		out __SP_L__,r28
+ 111               	/* prologue: function */
+ 112               	/* frame size = 10 */
+ 113               	/* stack size = 12 */
+ 114               	.L__stack_usage = 12
+ 350:src/main.c    **** 
+ 115               		.loc 1 350 0
+ 116 0050 61E0      		ldi r22,lo8(1)
+ 117 0052 80E0      		ldi r24,0
+ 118 0054 0E94 0000 		call lcd_gotoxy
+ 119               	.LVL5:
+ 353:src/main.c    **** 	lcd_puts("Edit Cam ");
+ 120               		.loc 1 353 0
+ 121 0058 8091 0000 		lds r24,setup_active_cam
+ 122 005c 90E0      		ldi r25,0
+ 123 005e 4AE0      		ldi r20,lo8(10)
+ 124 0060 50E0      		ldi r21,0
+ 125 0062 BE01      		movw r22,r28
+ 126 0064 6F5F      		subi r22,-1
+ 127 0066 7F4F      		sbci r23,-1
+ 128 0068 0196      		adiw r24,1
+ 129 006a 0E94 0000 		call itoa
+ 130               	.LVL6:
+ 354:src/main.c    **** 	lcd_gotoxy(9,1);
+ 131               		.loc 1 354 0
+ 132 006e 80E0      		ldi r24,lo8(.LC0)
+ 133 0070 90E0      		ldi r25,hi8(.LC0)
+ 134 0072 0E94 0000 		call lcd_puts
+ 135               	.LVL7:
+ 355:src/main.c    **** 	lcd_puts(tmp);
+ 136               		.loc 1 355 0
+ 137 0076 61E0      		ldi r22,lo8(1)
+ 138 0078 89E0      		ldi r24,lo8(9)
+ 139 007a 0E94 0000 		call lcd_gotoxy
+ 140               	.LVL8:
+ 356:src/main.c    **** }
+ 141               		.loc 1 356 0
+ 142 007e CE01      		movw r24,r28
+ 143 0080 0196      		adiw r24,1
+ 144 0082 0E94 0000 		call lcd_puts
+ 145               	.LVL9:
+ 146               	/* epilogue start */
+ 357:src/main.c    **** 
+ 147               		.loc 1 357 0
+ 148 0086 2A96      		adiw r28,10
+ 149 0088 0FB6      		in __tmp_reg__,__SREG__
+ 150 008a F894      		cli
+ 151 008c DEBF      		out __SP_H__,r29
+ 152 008e 0FBE      		out __SREG__,__tmp_reg__
+ 153 0090 CDBF      		out __SP_L__,r28
+ 154 0092 DF91      		pop r29
+ 155 0094 CF91      		pop r28
+ 156 0096 0895      		ret
+ 157               		.cfi_endproc
+ 158               	.LFE14:
+ 160               	.global	setup_cam_up
+ 162               	setup_cam_up:
+ 163               	.LFB15:
+ 360:src/main.c    **** 	setup_active_cam++;
+ 164               		.loc 1 360 0
+ 165               		.cfi_startproc
+ 166               	/* prologue: function */
+ 167               	/* frame size = 0 */
+ 168               	/* stack size = 0 */
+ 169               	.L__stack_usage = 0
+ 361:src/main.c    **** 
+ 170               		.loc 1 361 0
+ 171 0098 8091 0000 		lds r24,setup_active_cam
+ 172 009c 8F5F      		subi r24,lo8(-(1))
+ 363:src/main.c    **** 		setup_active_cam=0;
+ 173               		.loc 1 363 0
+ 174 009e 8430      		cpi r24,lo8(4)
+ 175 00a0 00F4      		brsh .L5
+ 361:src/main.c    **** 
+ 176               		.loc 1 361 0
+ 177 00a2 8093 0000 		sts setup_active_cam,r24
+ 178 00a6 00C0      		rjmp .L6
+ 179               	.L5:
+ 364:src/main.c    **** 
+ 180               		.loc 1 364 0
+ 181 00a8 1092 0000 		sts setup_active_cam,__zero_reg__
+ 182               	.L6:
+ 366:src/main.c    **** }
+ 183               		.loc 1 366 0
+ 184 00ac 0C94 0000 		jmp setup_show_cam
+ 185               	.LVL10:
+ 186               		.cfi_endproc
+ 187               	.LFE15:
+ 189               	.global	setup_cam_down
+ 191               	setup_cam_down:
+ 192               	.LFB16:
+ 370:src/main.c    **** 	setup_active_cam--;
+ 193               		.loc 1 370 0
+ 194               		.cfi_startproc
+ 195               	/* prologue: function */
+ 196               	/* frame size = 0 */
+ 197               	/* stack size = 0 */
+ 198               	.L__stack_usage = 0
+ 371:src/main.c    **** 	if(setup_active_cam>= CAM_COUNT)
+ 199               		.loc 1 371 0
+ 200 00b0 8091 0000 		lds r24,setup_active_cam
+ 201 00b4 8150      		subi r24,lo8(-(-1))
+ 372:src/main.c    **** 		setup_active_cam= CAM_COUNT-1;
+ 202               		.loc 1 372 0
+ 203 00b6 8430      		cpi r24,lo8(4)
+ 204 00b8 00F0      		brlo .L11
+ 373:src/main.c    **** 
+ 205               		.loc 1 373 0
+ 206 00ba 83E0      		ldi r24,lo8(3)
+ 207               	.L11:
+ 208 00bc 8093 0000 		sts setup_active_cam,r24
+ 375:src/main.c    **** }
+ 209               		.loc 1 375 0
+ 210 00c0 0C94 0000 		jmp setup_show_cam
+ 211               	.LVL11:
+ 212               		.cfi_endproc
+ 213               	.LFE16:
+ 215               		.section	.rodata.str1.1
+ 216               	.LC1:
+ 217 000a 4341 4D20 		.string	"CAM "
+ 217      00
+ 218               	.LC2:
+ 219 000f 6261 7365 		.string	"base_addr           "
+ 219      5F61 6464 
+ 219      7220 2020 
+ 219      2020 2020 
+ 219      2020 2020 
+ 220               	.LC3:
+ 221 0024 7061 6E20 		.string	"pan offset          "
+ 221      6F66 6673 
+ 221      6574 2020 
+ 221      2020 2020 
+ 221      2020 2020 
+ 222               	.LC4:
+ 223 0039 7469 6C74 		.string	"tilt offset         "
+ 223      206F 6666 
+ 223      7365 7420 
+ 223      2020 2020 
+ 223      2020 2020 
+ 224               	.LC5:
+ 225 004e 696E 7665 		.string	"invert pan          "
+ 225      7274 2070 
+ 225      616E 2020 
+ 225      2020 2020 
+ 225      2020 2020 
+ 226               	.LC6:
+ 227 0063 696E 7665 		.string	"invert tilt         "
+ 227      7274 2074 
+ 227      696C 7420 
+ 227      2020 2020 
+ 227      2020 2020 
+ 228               	.LC7:
+ 229 0078 2020 2020 		.string	"                 "
+ 229      2020 2020 
+ 229      2020 2020 
+ 229      2020 2020 
+ 229      2000 
+ 230               		.text
+ 231               	.global	param_show
+ 233               	param_show:
+ 234               	.LFB20:
+ 401:src/main.c    **** 	lcd_gotoxy(14,0);
+ 235               		.loc 1 401 0
+ 236               		.cfi_startproc
+ 237 00c4 CF93      		push r28
+ 238               	.LCFI4:
+ 239               		.cfi_def_cfa_offset 3
+ 240               		.cfi_offset 28, -2
+ 241 00c6 DF93      		push r29
+ 242               	.LCFI5:
+ 243               		.cfi_def_cfa_offset 4
+ 244               		.cfi_offset 29, -3
+ 245 00c8 CDB7      		in r28,__SP_L__
+ 246 00ca DEB7      		in r29,__SP_H__
+ 247               	.LCFI6:
+ 248               		.cfi_def_cfa_register 28
+ 249 00cc 6E97      		sbiw r28,30
+ 250               	.LCFI7:
+ 251               		.cfi_def_cfa_offset 34
+ 252 00ce 0FB6      		in __tmp_reg__,__SREG__
+ 253 00d0 F894      		cli
+ 254 00d2 DEBF      		out __SP_H__,r29
+ 255 00d4 0FBE      		out __SREG__,__tmp_reg__
+ 256 00d6 CDBF      		out __SP_L__,r28
+ 257               	/* prologue: function */
+ 258               	/* frame size = 30 */
+ 259               	/* stack size = 32 */
+ 260               	.L__stack_usage = 32
+ 402:src/main.c    **** 	lcd_puts("CAM ");
+ 261               		.loc 1 402 0
+ 262 00d8 60E0      		ldi r22,0
+ 263 00da 8EE0      		ldi r24,lo8(14)
+ 264 00dc 0E94 0000 		call lcd_gotoxy
+ 265               	.LVL12:
+ 403:src/main.c    **** 	char tmp[10];
+ 266               		.loc 1 403 0
+ 267 00e0 80E0      		ldi r24,lo8(.LC1)
+ 268 00e2 90E0      		ldi r25,hi8(.LC1)
+ 269 00e4 0E94 0000 		call lcd_puts
+ 270               	.LVL13:
+ 405:src/main.c    **** 	lcd_gotoxy(18,0);
+ 271               		.loc 1 405 0
+ 272 00e8 8091 0000 		lds r24,setup_active_cam
+ 273 00ec 90E0      		ldi r25,0
+ 274 00ee 4AE0      		ldi r20,lo8(10)
+ 275 00f0 50E0      		ldi r21,0
+ 276 00f2 BE01      		movw r22,r28
+ 277 00f4 6B5E      		subi r22,-21
+ 278 00f6 7F4F      		sbci r23,-1
+ 279 00f8 0196      		adiw r24,1
+ 280 00fa 0E94 0000 		call itoa
+ 281               	.LVL14:
+ 406:src/main.c    **** 	lcd_puts(tmp);
+ 282               		.loc 1 406 0
+ 283 00fe 60E0      		ldi r22,0
+ 284 0100 82E1      		ldi r24,lo8(18)
+ 285 0102 0E94 0000 		call lcd_gotoxy
+ 286               	.LVL15:
+ 407:src/main.c    **** 
+ 287               		.loc 1 407 0
+ 288 0106 CE01      		movw r24,r28
+ 289 0108 4596      		adiw r24,21
+ 290 010a 0E94 0000 		call lcd_puts
+ 291               	.LVL16:
+ 410:src/main.c    **** 	char toDraw[20];
+ 292               		.loc 1 410 0
+ 293 010e 61E0      		ldi r22,lo8(1)
+ 294 0110 80E0      		ldi r24,0
+ 295 0112 0E94 0000 		call lcd_gotoxy
+ 296               	.LVL17:
+ 412:src/main.c    **** 	{
+ 297               		.loc 1 412 0
+ 298 0116 8091 0000 		lds r24,param_id
+ 299 011a 8230      		cpi r24,lo8(2)
+ 300 011c 01F0      		breq .L14
+ 301 011e 00F4      		brsh .L15
+ 302 0120 8823      		tst r24
+ 303 0122 01F0      		breq .L16
+ 304 0124 8130      		cpi r24,lo8(1)
+ 305 0126 01F0      		breq .+2
+ 306 0128 00C0      		rjmp .L13
+ 418:src/main.c    **** 				changing_param=&cams[setup_active_cam].pan_address;
+ 307               		.loc 1 418 0
+ 308 012a 80E0      		ldi r24,lo8(.LC3)
+ 309 012c 90E0      		ldi r25,hi8(.LC3)
+ 310 012e 0E94 0000 		call lcd_puts
+ 311               	.LVL18:
+ 419:src/main.c    **** 		
+ 312               		.loc 1 419 0
+ 313 0132 8091 0000 		lds r24,setup_active_cam
+ 314 0136 2CE1      		ldi r18,lo8(28)
+ 315 0138 829F      		mul r24,r18
+ 316 013a C001      		movw r24,r0
+ 317 013c 1124      		clr __zero_reg__
+ 318 013e 8050      		subi r24,lo8(-(cams+2))
+ 319 0140 9040      		sbci r25,hi8(-(cams+2))
+ 320 0142 00C0      		rjmp .L20
+ 321               	.L15:
+ 412:src/main.c    **** 	{
+ 322               		.loc 1 412 0
+ 323 0144 8330      		cpi r24,lo8(3)
+ 324 0146 01F0      		breq .L18
+ 325 0148 8430      		cpi r24,lo8(4)
+ 326 014a 01F4      		brne .L13
+ 428:src/main.c    **** 				changing_param=&cams[setup_active_cam].tilt_invert;
+ 327               		.loc 1 428 0
+ 328 014c 80E0      		ldi r24,lo8(.LC6)
+ 329 014e 90E0      		ldi r25,hi8(.LC6)
+ 330 0150 0E94 0000 		call lcd_puts
+ 331               	.LVL19:
+ 429:src/main.c    **** 				break;
+ 332               		.loc 1 429 0
+ 333 0154 8091 0000 		lds r24,setup_active_cam
+ 334 0158 2CE1      		ldi r18,lo8(28)
+ 335 015a 829F      		mul r24,r18
+ 336 015c C001      		movw r24,r0
+ 337 015e 1124      		clr __zero_reg__
+ 338 0160 8050      		subi r24,lo8(-(cams+8))
+ 339 0162 9040      		sbci r25,hi8(-(cams+8))
+ 340 0164 00C0      		rjmp .L20
+ 341               	.L16:
+ 414:src/main.c    **** 				changing_param=&cams[setup_active_cam].base_addr;
+ 342               		.loc 1 414 0
+ 343 0166 80E0      		ldi r24,lo8(.LC2)
+ 344 0168 90E0      		ldi r25,hi8(.LC2)
+ 345 016a 0E94 0000 		call lcd_puts
+ 346               	.LVL20:
+ 415:src/main.c    **** 		
+ 347               		.loc 1 415 0
+ 348 016e 8091 0000 		lds r24,setup_active_cam
+ 349 0172 2CE1      		ldi r18,lo8(28)
+ 350 0174 829F      		mul r24,r18
+ 351 0176 C001      		movw r24,r0
+ 352 0178 1124      		clr __zero_reg__
+ 353 017a 8050      		subi r24,lo8(-(cams))
+ 354 017c 9040      		sbci r25,hi8(-(cams))
+ 355 017e 00C0      		rjmp .L20
+ 356               	.L14:
+ 422:src/main.c    **** 				changing_param=&cams[setup_active_cam].tilt_address;
+ 357               		.loc 1 422 0
+ 358 0180 80E0      		ldi r24,lo8(.LC4)
+ 359 0182 90E0      		ldi r25,hi8(.LC4)
+ 360 0184 0E94 0000 		call lcd_puts
+ 361               	.LVL21:
+ 423:src/main.c    **** 				break;
+ 362               		.loc 1 423 0
+ 363 0188 8091 0000 		lds r24,setup_active_cam
+ 364 018c 2CE1      		ldi r18,lo8(28)
+ 365 018e 829F      		mul r24,r18
+ 366 0190 C001      		movw r24,r0
+ 367 0192 1124      		clr __zero_reg__
+ 368 0194 8050      		subi r24,lo8(-(cams+4))
+ 369 0196 9040      		sbci r25,hi8(-(cams+4))
+ 370 0198 00C0      		rjmp .L20
+ 371               	.L18:
+ 425:src/main.c    **** 				changing_param=&cams[setup_active_cam].pan_invert;
+ 372               		.loc 1 425 0
+ 373 019a 80E0      		ldi r24,lo8(.LC5)
+ 374 019c 90E0      		ldi r25,hi8(.LC5)
+ 375 019e 0E94 0000 		call lcd_puts
+ 376               	.LVL22:
+ 426:src/main.c    **** 				break;
+ 377               		.loc 1 426 0
+ 378 01a2 8091 0000 		lds r24,setup_active_cam
+ 379 01a6 2CE1      		ldi r18,lo8(28)
+ 380 01a8 829F      		mul r24,r18
+ 381 01aa C001      		movw r24,r0
+ 382 01ac 1124      		clr __zero_reg__
+ 383 01ae 8050      		subi r24,lo8(-(cams+6))
+ 384 01b0 9040      		sbci r25,hi8(-(cams+6))
+ 385               	.L20:
+ 429:src/main.c    **** 				break;
+ 386               		.loc 1 429 0
+ 387 01b2 9093 0000 		sts changing_param+1,r25
+ 388 01b6 8093 0000 		sts changing_param,r24
+ 389               	.L13:
+ 434:src/main.c    **** 	lcd_gotoxy(0,2);
+ 390               		.loc 1 434 0
+ 391 01ba E091 0000 		lds r30,changing_param
+ 392 01be F091 0000 		lds r31,changing_param+1
+ 393 01c2 4AE0      		ldi r20,lo8(10)
+ 394 01c4 50E0      		ldi r21,0
+ 395 01c6 BE01      		movw r22,r28
+ 396 01c8 6F5F      		subi r22,-1
+ 397 01ca 7F4F      		sbci r23,-1
+ 398 01cc 8081      		ld r24,Z
+ 399 01ce 9181      		ldd r25,Z+1
+ 400 01d0 0E94 0000 		call itoa
+ 401               	.LVL23:
+ 435:src/main.c    **** 	lcd_puts("                 ");
+ 402               		.loc 1 435 0
+ 403 01d4 62E0      		ldi r22,lo8(2)
+ 404 01d6 80E0      		ldi r24,0
+ 405 01d8 0E94 0000 		call lcd_gotoxy
+ 406               	.LVL24:
+ 436:src/main.c    **** 	lcd_gotoxy(0,2);
+ 407               		.loc 1 436 0
+ 408 01dc 80E0      		ldi r24,lo8(.LC7)
+ 409 01de 90E0      		ldi r25,hi8(.LC7)
+ 410 01e0 0E94 0000 		call lcd_puts
+ 411               	.LVL25:
+ 437:src/main.c    **** 	lcd_puts(toDraw);
+ 412               		.loc 1 437 0
+ 413 01e4 62E0      		ldi r22,lo8(2)
+ 414 01e6 80E0      		ldi r24,0
+ 415 01e8 0E94 0000 		call lcd_gotoxy
+ 416               	.LVL26:
+ 438:src/main.c    **** }
+ 417               		.loc 1 438 0
+ 418 01ec CE01      		movw r24,r28
+ 419 01ee 0196      		adiw r24,1
+ 420 01f0 0E94 0000 		call lcd_puts
+ 421               	.LVL27:
+ 422               	/* epilogue start */
+ 439:src/main.c    **** 
+ 423               		.loc 1 439 0
+ 424 01f4 6E96      		adiw r28,30
+ 425 01f6 0FB6      		in __tmp_reg__,__SREG__
+ 426 01f8 F894      		cli
+ 427 01fa DEBF      		out __SP_H__,r29
+ 428 01fc 0FBE      		out __SREG__,__tmp_reg__
+ 429 01fe CDBF      		out __SP_L__,r28
+ 430 0200 DF91      		pop r29
+ 431 0202 CF91      		pop r28
+ 432 0204 0895      		ret
+ 433               		.cfi_endproc
+ 434               	.LFE20:
+ 436               	.global	param_next
+ 438               	param_next:
+ 439               	.LFB17:
+ 379:src/main.c    **** 	param_id++;
+ 440               		.loc 1 379 0
+ 441               		.cfi_startproc
+ 442               	/* prologue: function */
+ 443               	/* frame size = 0 */
+ 444               	/* stack size = 0 */
+ 445               	.L__stack_usage = 0
+ 380:src/main.c    **** 
+ 446               		.loc 1 380 0
+ 447 0206 8091 0000 		lds r24,param_id
+ 448 020a 8F5F      		subi r24,lo8(-(1))
+ 382:src/main.c    **** 		param_id=0;
+ 449               		.loc 1 382 0
+ 450 020c 8530      		cpi r24,lo8(5)
+ 451 020e 00F4      		brsh .L22
+ 380:src/main.c    **** 
+ 452               		.loc 1 380 0
+ 453 0210 8093 0000 		sts param_id,r24
+ 454 0214 00C0      		rjmp .L23
+ 455               	.L22:
+ 383:src/main.c    **** 
+ 456               		.loc 1 383 0
+ 457 0216 1092 0000 		sts param_id,__zero_reg__
+ 458               	.L23:
+ 385:src/main.c    **** }
+ 459               		.loc 1 385 0
+ 460 021a 0C94 0000 		jmp param_show
+ 461               	.LVL28:
+ 462               		.cfi_endproc
+ 463               	.LFE17:
+ 465               	.global	param_up
+ 467               	param_up:
+ 468               	.LFB18:
+ 389:src/main.c    **** 	(*changing_param)++;
+ 469               		.loc 1 389 0
+ 470               		.cfi_startproc
+ 471               	/* prologue: function */
+ 472               	/* frame size = 0 */
+ 473               	/* stack size = 0 */
+ 474               	.L__stack_usage = 0
+ 390:src/main.c    **** 	param_show();	
+ 475               		.loc 1 390 0
+ 476 021e E091 0000 		lds r30,changing_param
+ 477 0222 F091 0000 		lds r31,changing_param+1
+ 478 0226 8081      		ld r24,Z
+ 479 0228 9181      		ldd r25,Z+1
+ 480 022a 0196      		adiw r24,1
+ 481 022c 9183      		std Z+1,r25
+ 482 022e 8083      		st Z,r24
+ 391:src/main.c    **** }
+ 483               		.loc 1 391 0
+ 484 0230 0C94 0000 		jmp param_show
+ 485               	.LVL29:
+ 486               		.cfi_endproc
+ 487               	.LFE18:
+ 489               	.global	param_down
+ 491               	param_down:
+ 492               	.LFB19:
+ 395:src/main.c    **** 	(*changing_param)--;
+ 493               		.loc 1 395 0
+ 494               		.cfi_startproc
+ 495               	/* prologue: function */
+ 496               	/* frame size = 0 */
+ 497               	/* stack size = 0 */
+ 498               	.L__stack_usage = 0
+ 396:src/main.c    **** 	param_show();	
+ 499               		.loc 1 396 0
+ 500 0234 E091 0000 		lds r30,changing_param
+ 501 0238 F091 0000 		lds r31,changing_param+1
+ 502 023c 8081      		ld r24,Z
+ 503 023e 9181      		ldd r25,Z+1
+ 504 0240 0197      		sbiw r24,1
+ 505 0242 9183      		std Z+1,r25
+ 506 0244 8083      		st Z,r24
+ 397:src/main.c    **** }
+ 507               		.loc 1 397 0
+ 508 0246 0C94 0000 		jmp param_show
+ 509               	.LVL30:
+ 510               		.cfi_endproc
+ 511               	.LFE19:
+ 513               		.section	.rodata.str1.1
+ 514               	.LC8:
+ 515 008a 4163 7469 		.string	"Active: CAM "
+ 515      7665 3A20 
+ 515      4341 4D20 
+ 515      00
+ 516               	.LC9:
+ 517 0097 5061 6E3A 		.string	"Pan: %3d Tilt: %3d"
+ 517      2025 3364 
+ 517      2054 696C 
+ 517      743A 2025 
+ 517      3364 00
+ 518               		.text
+ 519               	.global	main_show
+ 521               	main_show:
+ 522               	.LFB11:
+ 296:src/main.c    **** 	lcd_gotoxy(0,1);
+ 523               		.loc 1 296 0
+ 524               		.cfi_startproc
+ 525 024a 0F93      		push r16
+ 526               	.LCFI8:
+ 527               		.cfi_def_cfa_offset 3
+ 528               		.cfi_offset 16, -2
+ 529 024c 1F93      		push r17
+ 530               	.LCFI9:
+ 531               		.cfi_def_cfa_offset 4
+ 532               		.cfi_offset 17, -3
+ 533 024e CF93      		push r28
+ 534               	.LCFI10:
+ 535               		.cfi_def_cfa_offset 5
+ 536               		.cfi_offset 28, -4
+ 537 0250 DF93      		push r29
+ 538               	.LCFI11:
+ 539               		.cfi_def_cfa_offset 6
+ 540               		.cfi_offset 29, -5
+ 541 0252 CDB7      		in r28,__SP_L__
+ 542 0254 DEB7      		in r29,__SP_H__
+ 543               	.LCFI12:
+ 544               		.cfi_def_cfa_register 28
+ 545 0256 6597      		sbiw r28,21
+ 546               	.LCFI13:
+ 547               		.cfi_def_cfa_offset 27
+ 548 0258 0FB6      		in __tmp_reg__,__SREG__
+ 549 025a F894      		cli
+ 550 025c DEBF      		out __SP_H__,r29
+ 551 025e 0FBE      		out __SREG__,__tmp_reg__
+ 552 0260 CDBF      		out __SP_L__,r28
+ 553               	/* prologue: function */
+ 554               	/* frame size = 21 */
+ 555               	/* stack size = 25 */
+ 556               	.L__stack_usage = 25
+ 297:src/main.c    **** 	lcd_puts("Active: CAM ");
+ 557               		.loc 1 297 0
+ 558 0262 61E0      		ldi r22,lo8(1)
+ 559 0264 80E0      		ldi r24,0
+ 560 0266 0E94 0000 		call lcd_gotoxy
+ 561               	.LVL31:
+ 298:src/main.c    **** 	char tmp[21];
+ 562               		.loc 1 298 0
+ 563 026a 80E0      		ldi r24,lo8(.LC8)
+ 564 026c 90E0      		ldi r25,hi8(.LC8)
+ 565 026e 0E94 0000 		call lcd_puts
+ 566               	.LVL32:
+ 300:src/main.c    **** 	lcd_gotoxy(12,1);
+ 567               		.loc 1 300 0
+ 568 0272 8091 0000 		lds r24,active_cam
+ 569 0276 90E0      		ldi r25,0
+ 570 0278 4AE0      		ldi r20,lo8(10)
+ 571 027a 50E0      		ldi r21,0
+ 572 027c 8E01      		movw r16,r28
+ 573 027e 0F5F      		subi r16,-1
+ 574 0280 1F4F      		sbci r17,-1
+ 575 0282 B801      		movw r22,r16
+ 576 0284 0196      		adiw r24,1
+ 577 0286 0E94 0000 		call itoa
+ 578               	.LVL33:
+ 301:src/main.c    **** 	lcd_puts(tmp);
+ 579               		.loc 1 301 0
+ 580 028a 61E0      		ldi r22,lo8(1)
+ 581 028c 8CE0      		ldi r24,lo8(12)
+ 582 028e 0E94 0000 		call lcd_gotoxy
+ 583               	.LVL34:
+ 302:src/main.c    **** 
+ 584               		.loc 1 302 0
+ 585 0292 C801      		movw r24,r16
+ 586 0294 0E94 0000 		call lcd_puts
+ 587               	.LVL35:
+ 304:src/main.c    **** 	sprintf(tmp,"Pan: %3d Tilt: %3d", cams[active_cam].pan, cams[active_cam].tilt);
+ 588               		.loc 1 304 0
+ 589 0298 62E0      		ldi r22,lo8(2)
+ 590 029a 80E0      		ldi r24,0
+ 591 029c 0E94 0000 		call lcd_gotoxy
+ 592               	.LVL36:
+ 305:src/main.c    **** 	lcd_puts(tmp);
+ 593               		.loc 1 305 0
+ 594 02a0 E091 0000 		lds r30,active_cam
+ 595 02a4 8CE1      		ldi r24,lo8(28)
+ 596 02a6 E89F      		mul r30,r24
+ 597 02a8 F001      		movw r30,r0
+ 598 02aa 1124      		clr __zero_reg__
+ 599 02ac E050      		subi r30,lo8(-(cams))
+ 600 02ae F040      		sbci r31,hi8(-(cams))
+ 601 02b0 8385      		ldd r24,Z+11
+ 602 02b2 1F92      		push __zero_reg__
+ 603 02b4 8F93      		push r24
+ 604 02b6 8285      		ldd r24,Z+10
+ 605 02b8 1F92      		push __zero_reg__
+ 606 02ba 8F93      		push r24
+ 607 02bc 80E0      		ldi r24,lo8(.LC9)
+ 608 02be 90E0      		ldi r25,hi8(.LC9)
+ 609 02c0 9F93      		push r25
+ 610 02c2 8F93      		push r24
+ 611 02c4 1F93      		push r17
+ 612 02c6 0F93      		push r16
+ 613 02c8 0E94 0000 		call sprintf
+ 614               	.LVL37:
+ 306:src/main.c    **** }	
+ 615               		.loc 1 306 0
+ 616 02cc C801      		movw r24,r16
+ 617 02ce 0E94 0000 		call lcd_puts
+ 618               	.LVL38:
+ 619 02d2 0FB6      		in __tmp_reg__,__SREG__
+ 620 02d4 F894      		cli
+ 621 02d6 DEBF      		out __SP_H__,r29
+ 622 02d8 0FBE      		out __SREG__,__tmp_reg__
+ 623 02da CDBF      		out __SP_L__,r28
+ 624               	/* epilogue start */
+ 307:src/main.c    **** 
+ 625               		.loc 1 307 0
+ 626 02dc 6596      		adiw r28,21
+ 627 02de 0FB6      		in __tmp_reg__,__SREG__
+ 628 02e0 F894      		cli
+ 629 02e2 DEBF      		out __SP_H__,r29
+ 630 02e4 0FBE      		out __SREG__,__tmp_reg__
+ 631 02e6 CDBF      		out __SP_L__,r28
+ 632 02e8 DF91      		pop r29
+ 633 02ea CF91      		pop r28
+ 634 02ec 1F91      		pop r17
+ 635 02ee 0F91      		pop r16
+ 636 02f0 0895      		ret
+ 637               		.cfi_endproc
+ 638               	.LFE11:
+ 640               	.global	save_data
+ 642               	save_data:
+ 643               	.LFB22:
+ 444:src/main.c    **** }
+ 445:src/main.c    **** 
+ 446:src/main.c    **** void save_data(void)
+ 447:src/main.c    **** {
+ 644               		.loc 1 447 0
+ 645               		.cfi_startproc
+ 646               	/* prologue: function */
+ 647               	/* frame size = 0 */
+ 648               	/* stack size = 0 */
+ 649               	.L__stack_usage = 0
+ 448:src/main.c    **** 	eeprom_write_block (cams, backup_cams, sizeof(cams));
+ 650               		.loc 1 448 0
+ 651 02f2 40E7      		ldi r20,lo8(112)
+ 652 02f4 50E0      		ldi r21,0
+ 653 02f6 60E0      		ldi r22,lo8(backup_cams)
+ 654 02f8 70E0      		ldi r23,hi8(backup_cams)
+ 655 02fa 80E0      		ldi r24,lo8(cams)
+ 656 02fc 90E0      		ldi r25,hi8(cams)
+ 657 02fe 0C94 0000 		jmp eeprom_write_block
+ 658               	.LVL39:
+ 659               		.cfi_endproc
+ 660               	.LFE22:
+ 662               	.global	set_menu
+ 664               	set_menu:
+ 665               	.LFB13:
+ 327:src/main.c    **** 	active_menu = menu;
+ 666               		.loc 1 327 0
+ 667               		.cfi_startproc
+ 668               	.LVL40:
+ 669 0302 CF93      		push r28
+ 670               	.LCFI14:
+ 671               		.cfi_def_cfa_offset 3
+ 672               		.cfi_offset 28, -2
+ 673 0304 DF93      		push r29
+ 674               	.LCFI15:
+ 675               		.cfi_def_cfa_offset 4
+ 676               		.cfi_offset 29, -3
+ 677               	/* prologue: function */
+ 678               	/* frame size = 0 */
+ 679               	/* stack size = 2 */
+ 680               	.L__stack_usage = 2
+ 681 0306 C82F      		mov r28,r24
+ 328:src/main.c    **** 	lcd_clrscr();
+ 682               		.loc 1 328 0
+ 683 0308 8093 0000 		sts active_menu,r24
+ 329:src/main.c    **** 	lcd_puts(menues[menu].lines[0]);
+ 684               		.loc 1 329 0
+ 685 030c 0E94 0000 		call lcd_clrscr
+ 686               	.LVL41:
+ 330:src/main.c    **** 	lcd_gotoxy(0,1);
+ 687               		.loc 1 330 0
+ 688 0310 86E1      		ldi r24,lo8(22)
+ 689 0312 C89F      		mul r28,r24
+ 690 0314 E001      		movw r28,r0
+ 691 0316 1124      		clr __zero_reg__
+ 692               	.LVL42:
+ 693 0318 C050      		subi r28,lo8(-(menues))
+ 694 031a D040      		sbci r29,hi8(-(menues))
+ 695 031c 8881      		ld r24,Y
+ 696 031e 9981      		ldd r25,Y+1
+ 697 0320 0E94 0000 		call lcd_puts
+ 698               	.LVL43:
+ 331:src/main.c    **** 	lcd_puts(menues[menu].lines[1]);
+ 699               		.loc 1 331 0
+ 700 0324 61E0      		ldi r22,lo8(1)
+ 701 0326 80E0      		ldi r24,0
+ 702 0328 0E94 0000 		call lcd_gotoxy
+ 703               	.LVL44:
+ 332:src/main.c    **** 	lcd_gotoxy(0,2);
+ 704               		.loc 1 332 0
+ 705 032c 8A81      		ldd r24,Y+2
+ 706 032e 9B81      		ldd r25,Y+3
+ 707 0330 0E94 0000 		call lcd_puts
+ 708               	.LVL45:
+ 333:src/main.c    **** 	lcd_puts(menues[menu].lines[2]);
+ 709               		.loc 1 333 0
+ 710 0334 62E0      		ldi r22,lo8(2)
+ 711 0336 80E0      		ldi r24,0
+ 712 0338 0E94 0000 		call lcd_gotoxy
+ 713               	.LVL46:
+ 334:src/main.c    **** 	lcd_gotoxy(0,3);
+ 714               		.loc 1 334 0
+ 715 033c 8C81      		ldd r24,Y+4
+ 716 033e 9D81      		ldd r25,Y+5
+ 717 0340 0E94 0000 		call lcd_puts
+ 718               	.LVL47:
+ 335:src/main.c    **** 	lcd_puts(menues[menu].lines[3]);
+ 719               		.loc 1 335 0
+ 720 0344 63E0      		ldi r22,lo8(3)
+ 721 0346 80E0      		ldi r24,0
+ 722 0348 0E94 0000 		call lcd_gotoxy
+ 723               	.LVL48:
+ 336:src/main.c    **** 
+ 724               		.loc 1 336 0
+ 725 034c 8E81      		ldd r24,Y+6
+ 726 034e 9F81      		ldd r25,Y+7
+ 727 0350 0E94 0000 		call lcd_puts
+ 728               	.LVL49:
+ 338:src/main.c    **** 		menues[menu].init();
+ 729               		.loc 1 338 0
+ 730 0354 EC89      		ldd r30,Y+20
+ 731 0356 FD89      		ldd r31,Y+21
+ 732 0358 3097      		sbiw r30,0
+ 733 035a 01F0      		breq .L28
+ 734               	/* epilogue start */
+ 342:src/main.c    **** 
+ 735               		.loc 1 342 0
+ 736 035c DF91      		pop r29
+ 737 035e CF91      		pop r28
+ 339:src/main.c    **** 
+ 738               		.loc 1 339 0
+ 739 0360 0994      		ijmp
+ 740               	.LVL50:
+ 741               	.L28:
+ 742               	/* epilogue start */
+ 342:src/main.c    **** 
+ 743               		.loc 1 342 0
+ 744 0362 DF91      		pop r29
+ 745 0364 CF91      		pop r28
+ 746 0366 0895      		ret
+ 747               		.cfi_endproc
+ 748               	.LFE13:
+ 750               	.global	process_inputs
+ 752               	process_inputs:
+ 753               	.LFB9:
+ 158:src/main.c    **** 	camkey_t keys = get_camkeys();
+ 754               		.loc 1 158 0
+ 755               		.cfi_startproc
+ 756 0368 0F93      		push r16
+ 757               	.LCFI16:
+ 758               		.cfi_def_cfa_offset 3
+ 759               		.cfi_offset 16, -2
+ 760 036a 1F93      		push r17
+ 761               	.LCFI17:
+ 762               		.cfi_def_cfa_offset 4
+ 763               		.cfi_offset 17, -3
+ 764 036c CF93      		push r28
+ 765               	.LCFI18:
+ 766               		.cfi_def_cfa_offset 5
+ 767               		.cfi_offset 28, -4
+ 768 036e DF93      		push r29
+ 769               	.LCFI19:
+ 770               		.cfi_def_cfa_offset 6
+ 771               		.cfi_offset 29, -5
+ 772               	/* prologue: function */
+ 773               	/* frame size = 0 */
+ 774               	/* stack size = 4 */
+ 775               	.L__stack_usage = 4
+ 159:src/main.c    **** 
+ 776               		.loc 1 159 0
+ 777 0370 0E94 0000 		call get_camkeys
+ 778               	.LVL51:
+ 779 0374 C82F      		mov r28,r24
+ 780               	.LVL52:
+ 161:src/main.c    **** 	{
+ 781               		.loc 1 161 0
+ 782 0376 8130      		cpi r24,lo8(1)
+ 783 0378 01F0      		breq .L35
+ 784 037a 00F0      		brlo .L33
+ 785 037c 8230      		cpi r24,lo8(2)
+ 786 037e 01F0      		breq .L35
+ 787 0380 8330      		cpi r24,lo8(3)
+ 788 0382 01F0      		breq .L35
+ 789 0384 00C0      		rjmp .L31
+ 790               	.L33:
+ 163:src/main.c    **** 		case CAM2: active_cam = 1; break;
+ 791               		.loc 1 163 0
+ 792 0386 1092 0000 		sts active_cam,__zero_reg__
+ 793 038a 00C0      		rjmp .L31
+ 794               	.L35:
+ 166:src/main.c    **** 		default: break;
+ 795               		.loc 1 166 0
+ 796 038c C093 0000 		sts active_cam,r28
+ 797               	.L31:
+ 171:src/main.c    **** 
+ 798               		.loc 1 171 0
+ 799 0390 8091 0000 		lds r24,active_cam
+ 800               	.LVL53:
+ 801 0394 0E94 0000 		call set_cam_leds
+ 802               	.LVL54:
+ 173:src/main.c    **** 	{
+ 803               		.loc 1 173 0
+ 804 0398 8091 0000 		lds r24,active_menu
+ 805 039c 8450      		subi r24,lo8(-(-4))
+ 806 039e 8230      		cpi r24,lo8(2)
+ 807 03a0 00F4      		brsh .L57
+ 808               	.L41:
+ 188:src/main.c    **** 	{
+ 809               		.loc 1 188 0
+ 810 03a2 CF3F      		cpi r28,lo8(-1)
+ 811 03a4 01F4      		brne .L37
+ 812 03a6 00C0      		rjmp .L38
+ 813               	.L57:
+ 814 03a8 00E0      		ldi r16,0
+ 815 03aa 10E0      		ldi r17,0
+ 816               	.LBB7:
+ 177:src/main.c    **** 			{
+ 817               		.loc 1 177 0
+ 818 03ac DEE0      		ldi r29,lo8(14)
+ 819               	.L36:
+ 820               	.LVL55:
+ 821 03ae 8091 0000 		lds r24,active_cam
+ 822 03b2 9801      		movw r18,r16
+ 823 03b4 D89F      		mul r29,r24
+ 824 03b6 200D      		add r18,r0
+ 825 03b8 311D      		adc r19,r1
+ 826 03ba 1124      		clr __zero_reg__
+ 827 03bc C901      		movw r24,r18
+ 828 03be F901      		movw r30,r18
+ 829 03c0 EE0F      		lsl r30
+ 830 03c2 FF1F      		rol r31
+ 831 03c4 E050      		subi r30,lo8(-(cams+12))
+ 832 03c6 F040      		sbci r31,hi8(-(cams+12))
+ 833 03c8 2081      		ld r18,Z
+ 834 03ca 3181      		ldd r19,Z+1
+ 835 03cc 2F3F      		cpi r18,-1
+ 836 03ce 3F4F      		sbci r19,-1
+ 837 03d0 01F0      		breq .L39
+ 177:src/main.c    **** 			{
+ 838               		.loc 1 177 0 is_stmt 0 discriminator 1
+ 839 03d2 880F      		lsl r24
+ 840 03d4 991F      		rol r25
+ 841 03d6 FC01      		movw r30,r24
+ 842 03d8 E050      		subi r30,lo8(-(cams+20))
+ 843 03da F040      		sbci r31,hi8(-(cams+20))
+ 844 03dc 8081      		ld r24,Z
+ 845 03de 9181      		ldd r25,Z+1
+ 846 03e0 0196      		adiw r24,1
+ 847 03e2 01F0      		breq .L39
+ 179:src/main.c    **** 			}
+ 848               		.loc 1 179 0 is_stmt 1
+ 849 03e4 802F      		mov r24,r16
+ 850 03e6 0E94 0000 		call set_store_led
+ 851               	.LVL56:
+ 852 03ea 00C0      		rjmp .L40
+ 853               	.L39:
+ 183:src/main.c    **** 			}
+ 854               		.loc 1 183 0
+ 855 03ec 802F      		mov r24,r16
+ 856 03ee 0E94 0000 		call reset_store_led
+ 857               	.LVL57:
+ 858               	.L40:
+ 175:src/main.c    **** 		{
+ 859               		.loc 1 175 0 discriminator 2
+ 860 03f2 0F5F      		subi r16,-1
+ 861 03f4 1F4F      		sbci r17,-1
+ 862               	.LVL58:
+ 863 03f6 0430      		cpi r16,4
+ 864 03f8 1105      		cpc r17,__zero_reg__
+ 865 03fa 01F4      		brne .L36
+ 866 03fc 00C0      		rjmp .L41
+ 867               	.LVL59:
+ 868               	.L37:
+ 869               	.LBE7:
+ 190:src/main.c    **** 			main_show();
+ 870               		.loc 1 190 0
+ 871 03fe 8091 0000 		lds r24,active_menu
+ 872 0402 8130      		cpi r24,lo8(1)
+ 873 0404 01F4      		brne .L38
+ 191:src/main.c    **** 
+ 874               		.loc 1 191 0
+ 875 0406 0E94 0000 		call main_show
+ 876               	.LVL60:
+ 877               	.L38:
+ 195:src/main.c    **** 
+ 878               		.loc 1 195 0
+ 879 040a 80E0      		ldi r24,0
+ 880 040c 0E94 0000 		call axis_offset
+ 881               	.LVL61:
+ 197:src/main.c    **** 	{
+ 882               		.loc 1 197 0
+ 883 0410 E091 0000 		lds r30,active_cam
+ 884 0414 2E2F      		mov r18,r30
+ 885 0416 30E0      		ldi r19,0
+ 886 0418 4CE1      		ldi r20,lo8(28)
+ 887 041a E49F      		mul r30,r20
+ 888 041c F001      		movw r30,r0
+ 889 041e 1124      		clr __zero_reg__
+ 890 0420 E050      		subi r30,lo8(-(cams))
+ 891 0422 F040      		sbci r31,hi8(-(cams))
+ 892 0424 4681      		ldd r20,Z+6
+ 893 0426 5781      		ldd r21,Z+7
+ 894 0428 452B      		or r20,r21
+ 895 042a 01F0      		breq .L42
+ 199:src/main.c    **** 	}
+ 896               		.loc 1 199 0
+ 897 042c 9195      		neg r25
+ 898 042e 8195      		neg r24
+ 899 0430 9109      		sbc r25,__zero_reg__
+ 900               	.LVL62:
+ 901               	.L42:
+ 202:src/main.c    **** 	if( (int16_t)cams[active_cam].pan+diff > 255)
+ 902               		.loc 1 202 0
+ 903 0432 4CE1      		ldi r20,lo8(28)
+ 904 0434 429F      		mul r20,r18
+ 905 0436 F001      		movw r30,r0
+ 906 0438 439F      		mul r20,r19
+ 907 043a F00D      		add r31,r0
+ 908 043c 1124      		clr __zero_reg__
+ 909 043e E050      		subi r30,lo8(-(cams))
+ 910 0440 F040      		sbci r31,hi8(-(cams))
+ 911 0442 C285      		ldd r28,Z+10
+ 912               	.LVL63:
+ 203:src/main.c    **** 		cams[active_cam].pan=255;
+ 913               		.loc 1 203 0
+ 914 0444 9C01      		movw r18,r24
+ 915 0446 2C0F      		add r18,r28
+ 916 0448 311D      		adc r19,__zero_reg__
+ 917 044a 2F3F      		cpi r18,-1
+ 918 044c 3105      		cpc r19,__zero_reg__
+ 919 044e 01F0      		breq .L43
+ 920 0450 04F0      		brlt .L43
+ 204:src/main.c    **** 	else if( (int16_t)cams[active_cam].pan+diff < 0)
+ 921               		.loc 1 204 0
+ 922 0452 8FEF      		ldi r24,lo8(-1)
+ 923               	.LVL64:
+ 924 0454 00C0      		rjmp .L75
+ 925               	.LVL65:
+ 926               	.L43:
+ 205:src/main.c    **** 		cams[active_cam].pan=0;
+ 927               		.loc 1 205 0
+ 928 0456 37FF      		sbrs r19,7
+ 929 0458 00C0      		rjmp .L45
+ 206:src/main.c    **** 	else
+ 930               		.loc 1 206 0
+ 931 045a 1286      		std Z+10,__zero_reg__
+ 932 045c 00C0      		rjmp .L44
+ 933               	.L45:
+ 208:src/main.c    **** 
+ 934               		.loc 1 208 0
+ 935 045e 8C0F      		add r24,r28
+ 936               	.LVL66:
+ 937               	.L75:
+ 938 0460 8287      		std Z+10,r24
+ 939               	.L44:
+ 210:src/main.c    **** 
+ 940               		.loc 1 210 0
+ 941 0462 81E0      		ldi r24,lo8(1)
+ 942 0464 0E94 0000 		call axis_offset
+ 943               	.LVL67:
+ 212:src/main.c    **** 	{
+ 944               		.loc 1 212 0
+ 945 0468 E091 0000 		lds r30,active_cam
+ 946 046c 2E2F      		mov r18,r30
+ 947 046e 30E0      		ldi r19,0
+ 948 0470 6CE1      		ldi r22,lo8(28)
+ 949 0472 E69F      		mul r30,r22
+ 950 0474 F001      		movw r30,r0
+ 951 0476 1124      		clr __zero_reg__
+ 952 0478 E050      		subi r30,lo8(-(cams))
+ 953 047a F040      		sbci r31,hi8(-(cams))
+ 954 047c 4085      		ldd r20,Z+8
+ 955 047e 5185      		ldd r21,Z+9
+ 956 0480 452B      		or r20,r21
+ 957 0482 01F4      		brne .L46
+ 210:src/main.c    **** 
+ 958               		.loc 1 210 0
+ 959 0484 9195      		neg r25
+ 960 0486 8195      		neg r24
+ 961 0488 9109      		sbc r25,__zero_reg__
+ 962               	.LVL68:
+ 963               	.L46:
+ 217:src/main.c    **** 	if( (int16_t)cams[active_cam].tilt+diff > 255)
+ 964               		.loc 1 217 0
+ 965 048a 4CE1      		ldi r20,lo8(28)
+ 966 048c 429F      		mul r20,r18
+ 967 048e F001      		movw r30,r0
+ 968 0490 439F      		mul r20,r19
+ 969 0492 F00D      		add r31,r0
+ 970 0494 1124      		clr __zero_reg__
+ 971 0496 E050      		subi r30,lo8(-(cams))
+ 972 0498 F040      		sbci r31,hi8(-(cams))
+ 973 049a D385      		ldd r29,Z+11
+ 974               	.LVL69:
+ 218:src/main.c    **** 		cams[active_cam].tilt=255;
+ 975               		.loc 1 218 0
+ 976 049c 9C01      		movw r18,r24
+ 977 049e 2D0F      		add r18,r29
+ 978 04a0 311D      		adc r19,__zero_reg__
+ 979 04a2 2F3F      		cpi r18,-1
+ 980 04a4 3105      		cpc r19,__zero_reg__
+ 981 04a6 01F0      		breq .L47
+ 982 04a8 04F0      		brlt .L47
+ 219:src/main.c    **** 	else if( (int16_t)cams[active_cam].tilt+diff < 0)
+ 983               		.loc 1 219 0
+ 984 04aa 8FEF      		ldi r24,lo8(-1)
+ 985               	.LVL70:
+ 986 04ac 00C0      		rjmp .L76
+ 987               	.LVL71:
+ 988               	.L47:
+ 220:src/main.c    **** 		cams[active_cam].tilt=0;
+ 989               		.loc 1 220 0
+ 990 04ae 37FF      		sbrs r19,7
+ 991 04b0 00C0      		rjmp .L49
+ 221:src/main.c    **** 	else
+ 992               		.loc 1 221 0
+ 993 04b2 1386      		std Z+11,__zero_reg__
+ 994 04b4 00C0      		rjmp .L48
+ 995               	.L49:
+ 223:src/main.c    **** 
+ 996               		.loc 1 223 0
+ 997 04b6 8D0F      		add r24,r29
+ 998               	.LVL72:
+ 999               	.L76:
+ 1000 04b8 8387      		std Z+11,r24
+ 1001               	.L48:
+ 228:src/main.c    **** 
+ 1002               		.loc 1 228 0
+ 1003 04ba 0E94 0000 		call get_storekeys
+ 1004               	.LVL73:
+ 230:src/main.c    **** 	{
+ 1005               		.loc 1 230 0
+ 1006 04be 8F3F      		cpi r24,lo8(-1)
+ 1007 04c0 01F4      		brne .+2
+ 1008 04c2 00C0      		rjmp .L50
+ 1009               	.LVL74:
+ 1010               	.LBB8:
+ 234:src/main.c    **** 		{
+ 1011               		.loc 1 234 0
+ 1012 04c4 9927      		clr r25
+ 1013               	.LVL75:
+ 1014 04c6 0197      		sbiw r24,1
+ 1015 04c8 8330      		cpi r24,3
+ 1016 04ca 9105      		cpc r25,__zero_reg__
+ 1017 04cc 00F4      		brsh .L58
+ 1018 04ce FC01      		movw r30,r24
+ 1019 04d0 E050      		subi r30,lo8(-(CSWTCH.41))
+ 1020 04d2 F040      		sbci r31,hi8(-(CSWTCH.41))
+ 1021 04d4 8081      		ld r24,Z
+ 1022 04d6 00C0      		rjmp .L51
+ 1023               	.L58:
+ 1024 04d8 80E0      		ldi r24,0
+ 1025               	.L51:
+ 1026               	.LVL76:
+ 244:src/main.c    **** 		{
+ 1027               		.loc 1 244 0
+ 1028 04da 2091 0000 		lds r18,active_menu
+ 1029 04de A091 0000 		lds r26,active_cam
+ 1030 04e2 90E0      		ldi r25,0
+ 1031 04e4 2430      		cpi r18,lo8(4)
+ 1032 04e6 01F4      		brne .L52
+ 246:src/main.c    **** 			cams[active_cam].store_tilt[store_id] = cams[active_cam].tilt;
+ 1033               		.loc 1 246 0
+ 1034 04e8 2EE0      		ldi r18,lo8(14)
+ 1035 04ea A29F      		mul r26,r18
+ 1036 04ec 800D      		add r24,r0
+ 1037 04ee 911D      		adc r25,r1
+ 1038 04f0 1124      		clr __zero_reg__
+ 1039               	.LVL77:
+ 1040 04f2 FC01      		movw r30,r24
+ 1041 04f4 EE0F      		lsl r30
+ 1042 04f6 FF1F      		rol r31
+ 1043 04f8 E050      		subi r30,lo8(-(cams+12))
+ 1044 04fa F040      		sbci r31,hi8(-(cams+12))
+ 1045 04fc 3CE1      		ldi r19,lo8(28)
+ 1046 04fe A39F      		mul r26,r19
+ 1047 0500 D001      		movw r26,r0
+ 1048 0502 1124      		clr __zero_reg__
+ 1049 0504 A050      		subi r26,lo8(-(cams))
+ 1050 0506 B040      		sbci r27,hi8(-(cams))
+ 1051 0508 1A96      		adiw r26,10
+ 1052 050a 2C91      		ld r18,X
+ 1053 050c 1A97      		sbiw r26,10
+ 1054 050e 30E0      		ldi r19,0
+ 1055 0510 3183      		std Z+1,r19
+ 1056 0512 2083      		st Z,r18
+ 247:src/main.c    **** 			//lcd_gotoxy(0,0);
+ 1057               		.loc 1 247 0
+ 1058 0514 880F      		lsl r24
+ 1059 0516 991F      		rol r25
+ 1060 0518 FC01      		movw r30,r24
+ 1061 051a E050      		subi r30,lo8(-(cams+20))
+ 1062 051c F040      		sbci r31,hi8(-(cams+20))
+ 1063 051e 1B96      		adiw r26,11
+ 1064 0520 8C91      		ld r24,X
+ 1065 0522 90E0      		ldi r25,0
+ 1066 0524 9183      		std Z+1,r25
+ 1067 0526 8083      		st Z,r24
+ 250:src/main.c    **** 			set_menu(MENU_MAIN);
+ 1068               		.loc 1 250 0
+ 1069 0528 0E94 0000 		call save_data
+ 1070               	.LVL78:
+ 251:src/main.c    **** 		}
+ 1071               		.loc 1 251 0
+ 1072 052c 81E0      		ldi r24,lo8(1)
+ 1073 052e 0E94 0000 		call set_menu
+ 1074               	.LVL79:
+ 1075 0532 00C0      		rjmp .L50
+ 1076               	.LVL80:
+ 1077               	.L52:
+ 253:src/main.c    **** 		{
+ 1078               		.loc 1 253 0
+ 1079 0534 2530      		cpi r18,lo8(5)
+ 1080 0536 01F4      		brne .L53
+ 255:src/main.c    **** 			cams[active_cam].store_tilt[store_id]=0xFFFF;
+ 1081               		.loc 1 255 0
+ 1082 0538 4EE0      		ldi r20,lo8(14)
+ 1083 053a A49F      		mul r26,r20
+ 1084 053c 800D      		add r24,r0
+ 1085 053e 911D      		adc r25,r1
+ 1086 0540 1124      		clr __zero_reg__
+ 1087               	.LVL81:
+ 1088 0542 FC01      		movw r30,r24
+ 1089 0544 EE0F      		lsl r30
+ 1090 0546 FF1F      		rol r31
+ 1091 0548 E050      		subi r30,lo8(-(cams+12))
+ 1092 054a F040      		sbci r31,hi8(-(cams+12))
+ 1093 054c 2FEF      		ldi r18,lo8(-1)
+ 1094 054e 3FEF      		ldi r19,lo8(-1)
+ 1095 0550 3183      		std Z+1,r19
+ 1096 0552 2083      		st Z,r18
+ 256:src/main.c    **** 			save_data();
+ 1097               		.loc 1 256 0
+ 1098 0554 880F      		lsl r24
+ 1099 0556 991F      		rol r25
+ 1100 0558 FC01      		movw r30,r24
+ 1101 055a E050      		subi r30,lo8(-(cams+20))
+ 1102 055c F040      		sbci r31,hi8(-(cams+20))
+ 1103 055e 3183      		std Z+1,r19
+ 1104 0560 2083      		st Z,r18
+ 257:src/main.c    **** 		}
+ 1105               		.loc 1 257 0
+ 1106 0562 0E94 0000 		call save_data
+ 1107               	.LVL82:
+ 1108 0566 00C0      		rjmp .L50
+ 1109               	.LVL83:
+ 1110               	.L53:
+ 261:src/main.c    **** 			{
+ 1111               		.loc 1 261 0
+ 1112 0568 2A2F      		mov r18,r26
+ 1113 056a 30E0      		ldi r19,0
+ 1114 056c 6EE0      		ldi r22,lo8(14)
+ 1115 056e A69F      		mul r26,r22
+ 1116 0570 800D      		add r24,r0
+ 1117 0572 911D      		adc r25,r1
+ 1118 0574 1124      		clr __zero_reg__
+ 1119               	.LVL84:
+ 1120 0576 FC01      		movw r30,r24
+ 1121 0578 EE0F      		lsl r30
+ 1122 057a FF1F      		rol r31
+ 1123 057c E050      		subi r30,lo8(-(cams+12))
+ 1124 057e F040      		sbci r31,hi8(-(cams+12))
+ 1125 0580 4081      		ld r20,Z
+ 1126 0582 5181      		ldd r21,Z+1
+ 1127 0584 4F3F      		cpi r20,-1
+ 1128 0586 6FEF      		ldi r22,-1
+ 1129 0588 5607      		cpc r21,r22
+ 1130 058a 01F0      		breq .L50
+ 261:src/main.c    **** 			{
+ 1131               		.loc 1 261 0 is_stmt 0 discriminator 1
+ 1132 058c 880F      		lsl r24
+ 1133 058e 991F      		rol r25
+ 1134 0590 FC01      		movw r30,r24
+ 1135 0592 E050      		subi r30,lo8(-(cams+20))
+ 1136 0594 F040      		sbci r31,hi8(-(cams+20))
+ 1137 0596 8081      		ld r24,Z
+ 1138 0598 9181      		ldd r25,Z+1
+ 1139 059a 0196      		adiw r24,1
+ 1140 059c 01F0      		breq .L50
+ 263:src/main.c    **** 				cams[active_cam].tilt = cams[active_cam].store_tilt[store_id];
+ 1141               		.loc 1 263 0 is_stmt 1
+ 1142 059e 8CE1      		ldi r24,lo8(28)
+ 1143 05a0 829F      		mul r24,r18
+ 1144 05a2 D001      		movw r26,r0
+ 1145 05a4 839F      		mul r24,r19
+ 1146 05a6 B00D      		add r27,r0
+ 1147 05a8 1124      		clr __zero_reg__
+ 1148 05aa A050      		subi r26,lo8(-(cams))
+ 1149 05ac B040      		sbci r27,hi8(-(cams))
+ 1150 05ae 1A96      		adiw r26,10
+ 1151 05b0 4C93      		st X,r20
+ 1152 05b2 1A97      		sbiw r26,10
+ 264:src/main.c    **** 				//lcd_gotoxy(0,0);
+ 1153               		.loc 1 264 0
+ 1154 05b4 8081      		ld r24,Z
+ 1155 05b6 1B96      		adiw r26,11
+ 1156 05b8 8C93      		st X,r24
+ 1157               	.L50:
+ 1158               	.LBE8:
+ 275:src/main.c    **** 	{
+ 1159               		.loc 1 275 0
+ 1160 05ba E091 0000 		lds r30,active_cam
+ 1161 05be 8E2F      		mov r24,r30
+ 1162 05c0 90E0      		ldi r25,0
+ 1163 05c2 2CE1      		ldi r18,lo8(28)
+ 1164 05c4 E29F      		mul r30,r18
+ 1165 05c6 F001      		movw r30,r0
+ 1166 05c8 1124      		clr __zero_reg__
+ 1167 05ca E050      		subi r30,lo8(-(cams))
+ 1168 05cc F040      		sbci r31,hi8(-(cams))
+ 1169 05ce 2385      		ldd r18,Z+11
+ 1170 05d0 D213      		cpse r29,r18
+ 1171 05d2 00C0      		rjmp .L54
+ 275:src/main.c    **** 	{
+ 1172               		.loc 1 275 0 is_stmt 0 discriminator 1
+ 1173 05d4 2285      		ldd r18,Z+10
+ 1174 05d6 C217      		cp r28,r18
+ 1175 05d8 01F0      		breq .L30
+ 1176               	.L54:
+ 277:src/main.c    **** 		write_dmx(cams[active_cam].base_addr + cams[active_cam].tilt_address, cams[active_cam].tilt);
+ 1177               		.loc 1 277 0 is_stmt 1
+ 1178 05da CCE1      		ldi r28,lo8(28)
+ 1179               	.LVL85:
+ 1180 05dc C89F      		mul r28,r24
+ 1181 05de F001      		movw r30,r0
+ 1182 05e0 C99F      		mul r28,r25
+ 1183 05e2 F00D      		add r31,r0
+ 1184 05e4 1124      		clr __zero_reg__
+ 1185 05e6 E050      		subi r30,lo8(-(cams))
+ 1186 05e8 F040      		sbci r31,hi8(-(cams))
+ 1187 05ea 2281      		ldd r18,Z+2
+ 1188 05ec 3381      		ldd r19,Z+3
+ 1189 05ee 8081      		ld r24,Z
+ 1190 05f0 9181      		ldd r25,Z+1
+ 1191 05f2 6285      		ldd r22,Z+10
+ 1192 05f4 820F      		add r24,r18
+ 1193 05f6 931F      		adc r25,r19
+ 1194 05f8 0E94 0000 		call write_dmx
+ 1195               	.LVL86:
+ 278:src/main.c    **** 
+ 1196               		.loc 1 278 0
+ 1197 05fc E091 0000 		lds r30,active_cam
+ 1198 0600 CE9F      		mul r28,r30
+ 1199 0602 F001      		movw r30,r0
+ 1200 0604 1124      		clr __zero_reg__
+ 1201 0606 E050      		subi r30,lo8(-(cams))
+ 1202 0608 F040      		sbci r31,hi8(-(cams))
+ 1203 060a 2481      		ldd r18,Z+4
+ 1204 060c 3581      		ldd r19,Z+5
+ 1205 060e 8081      		ld r24,Z
+ 1206 0610 9181      		ldd r25,Z+1
+ 1207 0612 6385      		ldd r22,Z+11
+ 1208 0614 820F      		add r24,r18
+ 1209 0616 931F      		adc r25,r19
+ 1210 0618 0E94 0000 		call write_dmx
+ 1211               	.LVL87:
+ 280:src/main.c    **** 			main_show();
+ 1212               		.loc 1 280 0
+ 1213 061c 8091 0000 		lds r24,active_menu
+ 1214 0620 8130      		cpi r24,lo8(1)
+ 1215 0622 01F4      		brne .L30
+ 1216               	/* epilogue start */
+ 284:src/main.c    **** 
+ 1217               		.loc 1 284 0
+ 1218 0624 DF91      		pop r29
+ 1219               	.LVL88:
+ 1220 0626 CF91      		pop r28
+ 1221 0628 1F91      		pop r17
+ 1222 062a 0F91      		pop r16
+ 281:src/main.c    **** 	}	
+ 1223               		.loc 1 281 0
+ 1224 062c 0C94 0000 		jmp main_show
+ 1225               	.LVL89:
+ 1226               	.L30:
+ 1227               	/* epilogue start */
+ 284:src/main.c    **** 
+ 1228               		.loc 1 284 0
+ 1229 0630 DF91      		pop r29
+ 1230               	.LVL90:
+ 1231 0632 CF91      		pop r28
+ 1232 0634 1F91      		pop r17
+ 1233 0636 0F91      		pop r16
+ 1234 0638 0895      		ret
+ 1235               		.cfi_endproc
+ 1236               	.LFE9:
+ 1238               	.global	process_menu
+ 1240               	process_menu:
+ 1241               	.LFB12:
+ 310:src/main.c    **** 	softkey_t button = get_softkeys();
+ 1242               		.loc 1 310 0
+ 1243               		.cfi_startproc
+ 1244 063a CF93      		push r28
+ 1245               	.LCFI20:
+ 1246               		.cfi_def_cfa_offset 3
+ 1247               		.cfi_offset 28, -2
+ 1248 063c DF93      		push r29
+ 1249               	.LCFI21:
+ 1250               		.cfi_def_cfa_offset 4
+ 1251               		.cfi_offset 29, -3
+ 1252               	/* prologue: function */
+ 1253               	/* frame size = 0 */
+ 1254               	/* stack size = 2 */
+ 1255               	.L__stack_usage = 2
+ 311:src/main.c    **** 
+ 1256               		.loc 1 311 0
+ 1257 063e 0E94 0000 		call get_softkeys
+ 1258               	.LVL91:
+ 313:src/main.c    **** 	{
+ 1259               		.loc 1 313 0
+ 1260 0642 8F3F      		cpi r24,lo8(-1)
+ 1261 0644 01F0      		breq .L77
+ 315:src/main.c    **** 				menues[active_menu].cb[button]();	
+ 1262               		.loc 1 315 0
+ 1263 0646 C82F      		mov r28,r24
+ 1264 0648 D0E0      		ldi r29,0
+ 1265 064a 8091 0000 		lds r24,active_menu
+ 1266               	.LVL92:
+ 1267 064e FE01      		movw r30,r28
+ 1268 0650 9BE0      		ldi r25,lo8(11)
+ 1269 0652 899F      		mul r24,r25
+ 1270 0654 E00D      		add r30,r0
+ 1271 0656 F11D      		adc r31,r1
+ 1272 0658 1124      		clr __zero_reg__
+ 1273 065a EE0F      		lsl r30
+ 1274 065c FF1F      		rol r31
+ 1275 065e E050      		subi r30,lo8(-(menues+12))
+ 1276 0660 F040      		sbci r31,hi8(-(menues+12))
+ 1277 0662 0190      		ld __tmp_reg__,Z+
+ 1278 0664 F081      		ld r31,Z
+ 1279 0666 E02D      		mov r30,__tmp_reg__
+ 1280 0668 3097      		sbiw r30,0
+ 1281 066a 01F0      		breq .L80
+ 316:src/main.c    **** 
+ 1282               		.loc 1 316 0
+ 1283 066c 0995      		icall
+ 1284               	.LVL93:
+ 1285               	.L80:
+ 318:src/main.c    **** 			set_menu(menues[active_menu].next[button]);
+ 1286               		.loc 1 318 0
+ 1287 066e 8091 0000 		lds r24,active_menu
+ 1288 0672 96E1      		ldi r25,lo8(22)
+ 1289 0674 899F      		mul r24,r25
+ 1290 0676 C00D      		add r28,r0
+ 1291 0678 D11D      		adc r29,r1
+ 1292 067a 1124      		clr __zero_reg__
+ 1293               	.LVL94:
+ 1294 067c C050      		subi r28,lo8(-(menues))
+ 1295 067e D040      		sbci r29,hi8(-(menues))
+ 1296 0680 8885      		ldd r24,Y+8
+ 1297 0682 8F3F      		cpi r24,lo8(-1)
+ 1298 0684 01F0      		breq .L77
+ 1299               	/* epilogue start */
+ 324:src/main.c    **** 
+ 1300               		.loc 1 324 0
+ 1301 0686 DF91      		pop r29
+ 1302 0688 CF91      		pop r28
+ 319:src/main.c    **** 	
+ 1303               		.loc 1 319 0
+ 1304 068a 0C94 0000 		jmp set_menu
+ 1305               	.LVL95:
+ 1306               	.L77:
+ 1307               	/* epilogue start */
+ 324:src/main.c    **** 
+ 1308               		.loc 1 324 0
+ 1309 068e DF91      		pop r29
+ 1310 0690 CF91      		pop r28
+ 1311 0692 0895      		ret
+ 1312               		.cfi_endproc
+ 1313               	.LFE12:
+ 1315               		.section	.text.startup,"ax",@progbits
+ 1316               	.global	main
+ 1318               	main:
+ 1319               	.LFB8:
+ 122:src/main.c    **** 	
+ 1320               		.loc 1 122 0
+ 1321               		.cfi_startproc
+ 1322               	/* prologue: function */
+ 1323               	/* frame size = 0 */
+ 1324               	/* stack size = 0 */
+ 1325               	.L__stack_usage = 0
+ 124:src/main.c    **** 	eeprom_read_block (cams, backup_cams, sizeof(cams));
+ 1326               		.loc 1 124 0
+ 1327 0000 0E94 0000 		call hardware_init
+ 1328               	.LVL96:
+ 125:src/main.c    **** 
+ 1329               		.loc 1 125 0
+ 1330 0004 40E7      		ldi r20,lo8(112)
+ 1331 0006 50E0      		ldi r21,0
+ 1332 0008 60E0      		ldi r22,lo8(backup_cams)
+ 1333 000a 70E0      		ldi r23,hi8(backup_cams)
+ 1334 000c 80E0      		ldi r24,lo8(cams)
+ 1335 000e 90E0      		ldi r25,hi8(cams)
+ 1336 0010 0E94 0000 		call eeprom_read_block
+ 1337               	.LVL97:
+ 127:src/main.c    **** 	set_menu(MENU_SPLASH);
+ 1338               		.loc 1 127 0
+ 1339 0014 8CE0      		ldi r24,lo8(12)
+ 1340 0016 0E94 0000 		call lcd_init
+ 1341               	.LVL98:
+ 128:src/main.c    **** 	dmx_init();
+ 1342               		.loc 1 128 0
+ 1343 001a 80E0      		ldi r24,0
+ 1344 001c 0E94 0000 		call set_menu
+ 1345               	.LVL99:
+ 129:src/main.c    **** 	ADC_Init();
+ 1346               		.loc 1 129 0
+ 1347 0020 0E94 0000 		call dmx_init
+ 1348               	.LVL100:
+ 130:src/main.c    **** 
+ 1349               		.loc 1 130 0
+ 1350 0024 0E94 0000 		call ADC_Init
+ 1351               	.LVL101:
+ 132:src/main.c    **** 	while(1)
+ 1352               		.loc 1 132 0
+ 1353 0028 C0E0      		ldi r28,0
+ 1354 002a D0E0      		ldi r29,0
+ 140:src/main.c    **** 		{
+ 1355               		.loc 1 140 0
+ 1356 002c 04E1      		ldi r16,lo8(20)
+ 1357 002e 10E0      		ldi r17,0
+ 146:src/main.c    **** 		{
+ 1358               		.loc 1 146 0
+ 1359 0030 88E2      		ldi r24,lo8(40)
+ 1360 0032 E82E      		mov r14,r24
+ 1361 0034 F12C      		mov r15,__zero_reg__
+ 1362               	.LVL102:
+ 1363               	.L89:
+ 135:src/main.c    **** 		process_inputs();
+ 1364               		.loc 1 135 0
+ 1365 0036 2196      		adiw r28,1
+ 1366               	.LVL103:
+ 136:src/main.c    **** 		process_menu();
+ 1367               		.loc 1 136 0
+ 1368 0038 0E94 0000 		call process_inputs
+ 1369               	.LVL104:
+ 137:src/main.c    **** 		_delay_ms(5);
+ 1370               		.loc 1 137 0
+ 1371 003c 0E94 0000 		call process_menu
+ 1372               	.LVL105:
+ 1373               	.LBB9:
+ 1374               	.LBB10:
+ 1375               		.file 2 "/usr/lib/avr/include/util/delay.h"
+   1:/usr/lib/avr/include/util/delay.h **** /* Copyright (c) 2002, Marek Michalkiewicz
+   2:/usr/lib/avr/include/util/delay.h ****    Copyright (c) 2004,2005,2007 Joerg Wunsch
+   3:/usr/lib/avr/include/util/delay.h ****    Copyright (c) 2007  Florin-Viorel Petrov
+   4:/usr/lib/avr/include/util/delay.h ****    All rights reserved.
+   5:/usr/lib/avr/include/util/delay.h **** 
+   6:/usr/lib/avr/include/util/delay.h ****    Redistribution and use in source and binary forms, with or without
+   7:/usr/lib/avr/include/util/delay.h ****    modification, are permitted provided that the following conditions are met:
+   8:/usr/lib/avr/include/util/delay.h **** 
+   9:/usr/lib/avr/include/util/delay.h ****    * Redistributions of source code must retain the above copyright
+  10:/usr/lib/avr/include/util/delay.h ****      notice, this list of conditions and the following disclaimer.
+  11:/usr/lib/avr/include/util/delay.h **** 
+  12:/usr/lib/avr/include/util/delay.h ****    * Redistributions in binary form must reproduce the above copyright
+  13:/usr/lib/avr/include/util/delay.h ****      notice, this list of conditions and the following disclaimer in
+  14:/usr/lib/avr/include/util/delay.h ****      the documentation and/or other materials provided with the
+  15:/usr/lib/avr/include/util/delay.h ****      distribution.
+  16:/usr/lib/avr/include/util/delay.h **** 
+  17:/usr/lib/avr/include/util/delay.h ****    * Neither the name of the copyright holders nor the names of
+  18:/usr/lib/avr/include/util/delay.h ****      contributors may be used to endorse or promote products derived
+  19:/usr/lib/avr/include/util/delay.h ****      from this software without specific prior written permission.
+  20:/usr/lib/avr/include/util/delay.h **** 
+  21:/usr/lib/avr/include/util/delay.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:/usr/lib/avr/include/util/delay.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:/usr/lib/avr/include/util/delay.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:/usr/lib/avr/include/util/delay.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  25:/usr/lib/avr/include/util/delay.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:/usr/lib/avr/include/util/delay.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:/usr/lib/avr/include/util/delay.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:/usr/lib/avr/include/util/delay.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:/usr/lib/avr/include/util/delay.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:/usr/lib/avr/include/util/delay.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:/usr/lib/avr/include/util/delay.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  32:/usr/lib/avr/include/util/delay.h **** 
+  33:/usr/lib/avr/include/util/delay.h **** /* $Id$ */
+  34:/usr/lib/avr/include/util/delay.h **** 
+  35:/usr/lib/avr/include/util/delay.h **** #ifndef _UTIL_DELAY_H_
+  36:/usr/lib/avr/include/util/delay.h **** #define _UTIL_DELAY_H_ 1
+  37:/usr/lib/avr/include/util/delay.h **** 
+  38:/usr/lib/avr/include/util/delay.h **** #ifndef __HAS_DELAY_CYCLES
+  39:/usr/lib/avr/include/util/delay.h **** #define __HAS_DELAY_CYCLES 1
+  40:/usr/lib/avr/include/util/delay.h **** #endif
+  41:/usr/lib/avr/include/util/delay.h **** 
+  42:/usr/lib/avr/include/util/delay.h **** #include <inttypes.h>
+  43:/usr/lib/avr/include/util/delay.h **** #include <util/delay_basic.h>
+  44:/usr/lib/avr/include/util/delay.h **** #include <math.h>
+  45:/usr/lib/avr/include/util/delay.h **** 
+  46:/usr/lib/avr/include/util/delay.h **** /** \file */
+  47:/usr/lib/avr/include/util/delay.h **** /** \defgroup util_delay <util/delay.h>: Convenience functions for busy-wait delay loops
+  48:/usr/lib/avr/include/util/delay.h ****     \code
+  49:/usr/lib/avr/include/util/delay.h ****     #define F_CPU 1000000UL  // 1 MHz
+  50:/usr/lib/avr/include/util/delay.h ****     //#define F_CPU 14.7456E6
+  51:/usr/lib/avr/include/util/delay.h ****     #include <util/delay.h>
+  52:/usr/lib/avr/include/util/delay.h ****     \endcode
+  53:/usr/lib/avr/include/util/delay.h **** 
+  54:/usr/lib/avr/include/util/delay.h ****     \note As an alternative method, it is possible to pass the
+  55:/usr/lib/avr/include/util/delay.h ****     F_CPU macro down to the compiler from the Makefile.
+  56:/usr/lib/avr/include/util/delay.h ****     Obviously, in that case, no \c \#define statement should be
+  57:/usr/lib/avr/include/util/delay.h ****     used.
+  58:/usr/lib/avr/include/util/delay.h **** 
+  59:/usr/lib/avr/include/util/delay.h ****     The functions in this header file are wrappers around the basic
+  60:/usr/lib/avr/include/util/delay.h ****     busy-wait functions from <util/delay_basic.h>.  They are meant as
+  61:/usr/lib/avr/include/util/delay.h ****     convenience functions where actual time values can be specified
+  62:/usr/lib/avr/include/util/delay.h ****     rather than a number of cycles to wait for.  The idea behind is
+  63:/usr/lib/avr/include/util/delay.h ****     that compile-time constant expressions will be eliminated by
+  64:/usr/lib/avr/include/util/delay.h ****     compiler optimization so floating-point expressions can be used
+  65:/usr/lib/avr/include/util/delay.h ****     to calculate the number of delay cycles needed based on the CPU
+  66:/usr/lib/avr/include/util/delay.h ****     frequency passed by the macro F_CPU.
+  67:/usr/lib/avr/include/util/delay.h **** 
+  68:/usr/lib/avr/include/util/delay.h ****     \note In order for these functions to work as intended, compiler
+  69:/usr/lib/avr/include/util/delay.h ****     optimizations <em>must</em> be enabled, and the delay time
+  70:/usr/lib/avr/include/util/delay.h ****     <em>must</em> be an expression that is a known constant at
+  71:/usr/lib/avr/include/util/delay.h ****     compile-time.  If these requirements are not met, the resulting
+  72:/usr/lib/avr/include/util/delay.h ****     delay will be much longer (and basically unpredictable), and
+  73:/usr/lib/avr/include/util/delay.h ****     applications that otherwise do not use floating-point calculations
+  74:/usr/lib/avr/include/util/delay.h ****     will experience severe code bloat by the floating-point library
+  75:/usr/lib/avr/include/util/delay.h ****     routines linked into the application.
+  76:/usr/lib/avr/include/util/delay.h **** 
+  77:/usr/lib/avr/include/util/delay.h ****     The functions available allow the specification of microsecond, and
+  78:/usr/lib/avr/include/util/delay.h ****     millisecond delays directly, using the application-supplied macro
+  79:/usr/lib/avr/include/util/delay.h ****     F_CPU as the CPU clock frequency (in Hertz).
+  80:/usr/lib/avr/include/util/delay.h **** 
+  81:/usr/lib/avr/include/util/delay.h **** */
+  82:/usr/lib/avr/include/util/delay.h **** 
+  83:/usr/lib/avr/include/util/delay.h **** #if !defined(__DOXYGEN__)
+  84:/usr/lib/avr/include/util/delay.h **** static inline void _delay_us(double __us) __attribute__((always_inline));
+  85:/usr/lib/avr/include/util/delay.h **** static inline void _delay_ms(double __ms) __attribute__((always_inline));
+  86:/usr/lib/avr/include/util/delay.h **** #endif
+  87:/usr/lib/avr/include/util/delay.h **** 
+  88:/usr/lib/avr/include/util/delay.h **** #ifndef F_CPU
+  89:/usr/lib/avr/include/util/delay.h **** /* prevent compiler error by supplying a default */
+  90:/usr/lib/avr/include/util/delay.h **** # warning "F_CPU not defined for <util/delay.h>"
+  91:/usr/lib/avr/include/util/delay.h **** # define F_CPU 1000000UL
+  92:/usr/lib/avr/include/util/delay.h **** #endif
+  93:/usr/lib/avr/include/util/delay.h **** 
+  94:/usr/lib/avr/include/util/delay.h **** #ifndef __OPTIMIZE__
+  95:/usr/lib/avr/include/util/delay.h **** # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+  96:/usr/lib/avr/include/util/delay.h **** #endif
+  97:/usr/lib/avr/include/util/delay.h **** 
+  98:/usr/lib/avr/include/util/delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+  99:/usr/lib/avr/include/util/delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 100:/usr/lib/avr/include/util/delay.h ****   __STDC_HOSTED__
+ 101:/usr/lib/avr/include/util/delay.h **** #  include <math.h>
+ 102:/usr/lib/avr/include/util/delay.h **** #endif
+ 103:/usr/lib/avr/include/util/delay.h **** 
+ 104:/usr/lib/avr/include/util/delay.h **** /**
+ 105:/usr/lib/avr/include/util/delay.h ****    \ingroup util_delay
+ 106:/usr/lib/avr/include/util/delay.h **** 
+ 107:/usr/lib/avr/include/util/delay.h ****    Perform a delay of \c __ms milliseconds, using _delay_loop_2().
+ 108:/usr/lib/avr/include/util/delay.h **** 
+ 109:/usr/lib/avr/include/util/delay.h ****    The macro F_CPU is supposed to be defined to a
+ 110:/usr/lib/avr/include/util/delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 111:/usr/lib/avr/include/util/delay.h **** 
+ 112:/usr/lib/avr/include/util/delay.h ****    The maximal possible delay is 262.14 ms / F_CPU in MHz.
+ 113:/usr/lib/avr/include/util/delay.h **** 
+ 114:/usr/lib/avr/include/util/delay.h ****    When the user request delay which exceed the maximum possible one,
+ 115:/usr/lib/avr/include/util/delay.h ****    _delay_ms() provides a decreased resolution functionality. In this
+ 116:/usr/lib/avr/include/util/delay.h ****    mode _delay_ms() will work with a resolution of 1/10 ms, providing
+ 117:/usr/lib/avr/include/util/delay.h ****    delays up to 6.5535 seconds (independent from CPU frequency).  The
+ 118:/usr/lib/avr/include/util/delay.h ****    user will not be informed about decreased resolution.
+ 119:/usr/lib/avr/include/util/delay.h **** 
+ 120:/usr/lib/avr/include/util/delay.h ****    If the avr-gcc toolchain has __builtin_avr_delay_cycles(unsigned long)
+ 121:/usr/lib/avr/include/util/delay.h ****    support, maximal possible delay is 4294967.295 ms/ F_CPU in MHz. For
+ 122:/usr/lib/avr/include/util/delay.h ****    values greater than the maximal possible delay, overflows results in
+ 123:/usr/lib/avr/include/util/delay.h ****    no delay i.e., 0ms.
+ 124:/usr/lib/avr/include/util/delay.h **** 
+ 125:/usr/lib/avr/include/util/delay.h ****    Conversion of __us into clock cycles may not always result in integer.
+ 126:/usr/lib/avr/include/util/delay.h ****    By default, the clock cycles rounded up to next integer. This ensures that
+ 127:/usr/lib/avr/include/util/delay.h ****    the user gets atleast __us microseconds of delay.
+ 128:/usr/lib/avr/include/util/delay.h **** 
+ 129:/usr/lib/avr/include/util/delay.h ****    Alternatively, user can define __DELAY_ROUND_DOWN__ and __DELAY_ROUND_CLOSEST__
+ 130:/usr/lib/avr/include/util/delay.h ****    to round down and round to closest integer.
+ 131:/usr/lib/avr/include/util/delay.h **** 
+ 132:/usr/lib/avr/include/util/delay.h ****    Note: The new implementation of _delay_ms(double __ms) with 
+ 133:/usr/lib/avr/include/util/delay.h ****     __builtin_avr_delay_cycles(unsigned long) support is not backward compatible. 
+ 134:/usr/lib/avr/include/util/delay.h ****    User can define __DELAY_BACKWARD_COMPATIBLE__ to get a backward compatible delay.
+ 135:/usr/lib/avr/include/util/delay.h ****    Also, the backward compatible
+ 136:/usr/lib/avr/include/util/delay.h ****    algorithm will be chosen if the code is compiled in a <em>freestanding
+ 137:/usr/lib/avr/include/util/delay.h ****    environment</em> (GCC option \c -ffreestanding), as the math functions
+ 138:/usr/lib/avr/include/util/delay.h ****    required for rounding are not available to the compiler then.
+ 139:/usr/lib/avr/include/util/delay.h **** 
+ 140:/usr/lib/avr/include/util/delay.h ****  */
+ 141:/usr/lib/avr/include/util/delay.h **** void
+ 142:/usr/lib/avr/include/util/delay.h **** _delay_ms(double __ms)
+ 143:/usr/lib/avr/include/util/delay.h **** {
+ 144:/usr/lib/avr/include/util/delay.h **** 	double __tmp ; 
+ 145:/usr/lib/avr/include/util/delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 146:/usr/lib/avr/include/util/delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 147:/usr/lib/avr/include/util/delay.h ****   __STDC_HOSTED__
+ 148:/usr/lib/avr/include/util/delay.h **** 	uint32_t __ticks_dc;
+ 149:/usr/lib/avr/include/util/delay.h **** 	extern void __builtin_avr_delay_cycles(unsigned long);
+ 150:/usr/lib/avr/include/util/delay.h **** 	__tmp = ((F_CPU) / 1e3) * __ms;
+ 151:/usr/lib/avr/include/util/delay.h **** 
+ 152:/usr/lib/avr/include/util/delay.h **** 	#if defined(__DELAY_ROUND_DOWN__)
+ 153:/usr/lib/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)fabs(__tmp);
+ 154:/usr/lib/avr/include/util/delay.h **** 
+ 155:/usr/lib/avr/include/util/delay.h **** 	#elif defined(__DELAY_ROUND_CLOSEST__)
+ 156:/usr/lib/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)(fabs(__tmp)+0.5);
+ 157:/usr/lib/avr/include/util/delay.h **** 
+ 158:/usr/lib/avr/include/util/delay.h **** 	#else
+ 159:/usr/lib/avr/include/util/delay.h **** 		//round up by default
+ 160:/usr/lib/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+ 161:/usr/lib/avr/include/util/delay.h **** 	#endif
+ 162:/usr/lib/avr/include/util/delay.h **** 
+ 163:/usr/lib/avr/include/util/delay.h **** 	__builtin_avr_delay_cycles(__ticks_dc);
+ 1376               		.loc 2 163 0
+ 1377 0040 8FE1      		ldi r24,lo8(19999)
+ 1378 0042 9EE4      		ldi r25,hi8(19999)
+ 1379 0044 0197      	1:	sbiw r24,1
+ 1380 0046 01F4      		brne 1b
+ 1381 0048 00C0      		rjmp .
+ 1382 004a 0000      		nop
+ 1383               	.LBE10:
+ 1384               	.LBE9:
+ 140:src/main.c    **** 		{
+ 1385               		.loc 1 140 0
+ 1386 004c 8091 0000 		lds r24,active_menu
+ 1387 0050 8450      		subi r24,lo8(-(-4))
+ 1388 0052 8230      		cpi r24,lo8(2)
+ 1389 0054 00F0      		brlo .L90
+ 1390               	.L93:
+ 146:src/main.c    **** 		{
+ 1391               		.loc 1 146 0
+ 1392 0056 8091 0000 		lds r24,active_menu
+ 1393 005a 8450      		subi r24,lo8(-(-4))
+ 1394 005c 8230      		cpi r24,lo8(2)
+ 1395 005e 00F4      		brsh .L89
+ 1396 0060 00C0      		rjmp .L94
+ 1397               	.L90:
+ 140:src/main.c    **** 		{
+ 1398               		.loc 1 140 0 discriminator 1
+ 1399 0062 CE01      		movw r24,r28
+ 1400 0064 B801      		movw r22,r16
+ 1401 0066 0E94 0000 		call __udivmodhi4
+ 1402 006a 892B      		or r24,r25
+ 1403 006c 01F4      		brne .L93
+ 1404               	.LVL106:
+ 1405               	.LBB11:
+ 143:src/main.c    **** 		}
+ 1406               		.loc 1 143 0
+ 1407 006e 80E0      		ldi r24,0
+ 1408 0070 0E94 0000 		call reset_store_led
+ 1409               	.LVL107:
+ 1410 0074 81E0      		ldi r24,lo8(1)
+ 1411 0076 0E94 0000 		call reset_store_led
+ 1412               	.LVL108:
+ 1413 007a 82E0      		ldi r24,lo8(2)
+ 1414 007c 0E94 0000 		call reset_store_led
+ 1415               	.LVL109:
+ 1416 0080 83E0      		ldi r24,lo8(3)
+ 1417 0082 0E94 0000 		call reset_store_led
+ 1418               	.LVL110:
+ 1419 0086 00C0      		rjmp .L93
+ 1420               	.LVL111:
+ 1421               	.L94:
+ 1422               	.LBE11:
+ 146:src/main.c    **** 		{
+ 1423               		.loc 1 146 0 discriminator 1
+ 1424 0088 CE01      		movw r24,r28
+ 1425 008a B701      		movw r22,r14
+ 1426 008c 0E94 0000 		call __udivmodhi4
+ 1427 0090 892B      		or r24,r25
+ 1428 0092 01F4      		brne .L89
+ 1429               	.LVL112:
+ 1430               	.LBB12:
+ 149:src/main.c    **** 		}
+ 1431               		.loc 1 149 0
+ 1432 0094 80E0      		ldi r24,0
+ 1433 0096 0E94 0000 		call set_store_led
+ 1434               	.LVL113:
+ 1435 009a 81E0      		ldi r24,lo8(1)
+ 1436 009c 0E94 0000 		call set_store_led
+ 1437               	.LVL114:
+ 1438 00a0 82E0      		ldi r24,lo8(2)
+ 1439 00a2 0E94 0000 		call set_store_led
+ 1440               	.LVL115:
+ 1441 00a6 83E0      		ldi r24,lo8(3)
+ 1442 00a8 0E94 0000 		call set_store_led
+ 1443               	.LVL116:
+ 1444 00ac 00C0      		rjmp .L89
+ 1445               	.LBE12:
+ 1446               		.cfi_endproc
+ 1447               	.LFE8:
+ 1449               		.section	.rodata
+ 1452               	CSWTCH.41:
+ 1453 0000 01        		.byte	1
+ 1454 0001 02        		.byte	2
+ 1455 0002 03        		.byte	3
+ 1456               		.comm	changing_param,2,1
+ 1457               	.global	param_id
+ 1458               		.section .bss
+ 1461               	param_id:
+ 1462 0000 00        		.zero	1
+ 1463               	.global	setup_active_cam
+ 1466               	setup_active_cam:
+ 1467 0001 00        		.zero	1
+ 1468               		.comm	active_cam,1,1
+ 1469               	.global	backup_cams
+ 1470               		.section	.eeprom,"aw",@progbits
+ 1473               	backup_cams:
+ 1474 0000 0000 0000 		.zero	112
+ 1474      0000 0000 
+ 1474      0000 0000 
+ 1474      0000 0000 
+ 1474      0000 0000 
+ 1475               		.comm	cams,112,1
+ 1476               		.comm	active_menu,1,1
+ 1477               	.global	menues
+ 1478               		.section	.rodata.str1.1
+ 1479               	.LC10:
+ 1480 00aa 4472 6167 		.string	"DragonVideo        "
+ 1480      6F6E 5669 
+ 1480      6465 6F20 
+ 1480      2020 2020 
+ 1480      2020 2000 
+ 1481               	.LC11:
+ 1482 00be 4279 204B 		.string	"By Karrn            "
+ 1482      6172 726E 
+ 1482      2020 2020 
+ 1482      2020 2020 
+ 1482      2020 2020 
+ 1483               	.LC12:
+ 1484 00d3 4361 6D20 		.string	"Cam controller      "
+ 1484      636F 6E74 
+ 1484      726F 6C6C 
+ 1484      6572 2020 
+ 1484      2020 2020 
+ 1485               	.LC13:
+ 1486 00e8 2020 2020 		.string	"                2017"
+ 1486      2020 2020 
+ 1486      2020 2020 
+ 1486      2020 2020 
+ 1486      3230 3137 
+ 1487               	.LC14:
+ 1488 00fd 2020 2020 		.string	"                    "
+ 1488      2020 2020 
+ 1488      2020 2020 
+ 1488      2020 2020 
+ 1488      2020 2020 
+ 1489               	.LC15:
+ 1490 0112 5354 4F52 		.string	"STORE          SETUP"
+ 1490      4520 2020 
+ 1490      2020 2020 
+ 1490      2020 2053 
+ 1490      4554 5550 
+ 1491               	.LC16:
+ 1492 0127 5365 7475 		.string	"Setup              "
+ 1492      7020 2020 
+ 1492      2020 2020 
+ 1492      2020 2020 
+ 1492      2020 2000 
+ 1493               	.LC17:
+ 1494 013b 5052 4556 		.string	"PREV NEXT MOD.  BACK"
+ 1494      204E 4558 
+ 1494      5420 4D4F 
+ 1494      442E 2020 
+ 1494      4241 434B 
+ 1495               	.LC18:
+ 1496 0150 4E45 5854 		.string	"NEXT UP   DOWN  BACK"
+ 1496      2055 5020 
+ 1496      2020 444F 
+ 1496      574E 2020 
+ 1496      4241 434B 
+ 1497               	.LC19:
+ 1498 0165 5374 6F72 		.string	"Store              "
+ 1498      6520 2020 
+ 1498      2020 2020 
+ 1498      2020 2020 
+ 1498      2020 2000 
+ 1499               	.LC20:
+ 1500 0179 4368 6F6F 		.string	"Choose store to save"
+ 1500      7365 2073 
+ 1500      746F 7265 
+ 1500      2074 6F20 
+ 1500      7361 7665 
+ 1501               	.LC21:
+ 1502 018e 2020 2020 		.string	"     CLEAR     ABORT"
+ 1502      2043 4C45 
+ 1502      4152 2020 
+ 1502      2020 2041 
+ 1502      424F 5254 
+ 1503               	.LC22:
+ 1504 01a3 436C 6561 		.string	"Clear store        "
+ 1504      7220 7374 
+ 1504      6F72 6520 
+ 1504      2020 2020 
+ 1504      2020 2000 
+ 1505               	.LC23:
+ 1506 01b7 4368 6F6F 		.string	"Choose store        "
+ 1506      7365 2073 
+ 1506      746F 7265 
+ 1506      2020 2020 
+ 1506      2020 2020 
+ 1507               	.LC24:
+ 1508 01cc 414C 4C20 		.string	"ALL            ABORT"
+ 1508      2020 2020 
+ 1508      2020 2020 
+ 1508      2020 2041 
+ 1508      424F 5254 
+ 1509               		.data
+ 1512               	menues:
+ 1513 0000 0000      		.word	.LC10
+ 1514 0002 0000      		.word	.LC11
+ 1515 0004 0000      		.word	.LC12
+ 1516 0006 0000      		.word	.LC13
+ 1517 0008 01        		.byte	1
+ 1518 0009 01        		.byte	1
+ 1519 000a 01        		.byte	1
+ 1520 000b 01        		.byte	1
+ 1521 000c 0000      		.word	0
+ 1522 000e 0000      		.word	0
+ 1523 0010 0000      		.word	0
+ 1524 0012 0000      		.word	0
+ 1525 0014 0000      		.word	0
+ 1526 0016 0000      		.word	.LC10
+ 1527 0018 0000      		.word	.LC14
+ 1528 001a 0000      		.word	.LC14
+ 1529 001c 0000      		.word	.LC15
+ 1530 001e 04        		.byte	4
+ 1531 001f FF        		.byte	-1
+ 1532 0020 FF        		.byte	-1
+ 1533 0021 02        		.byte	2
+ 1534 0022 0000      		.word	0
+ 1535 0024 0000      		.word	0
+ 1536 0026 0000      		.word	0
+ 1537 0028 0000      		.word	0
+ 1538 002a 0000      		.word	gs(main_show)
+ 1539 002c 0000      		.word	.LC16
+ 1540 002e 0000      		.word	.LC14
+ 1541 0030 0000      		.word	.LC14
+ 1542 0032 0000      		.word	.LC17
+ 1543 0034 FF        		.byte	-1
+ 1544 0035 FF        		.byte	-1
+ 1545 0036 03        		.byte	3
+ 1546 0037 01        		.byte	1
+ 1547 0038 0000      		.word	gs(setup_cam_down)
+ 1548 003a 0000      		.word	gs(setup_cam_up)
+ 1549 003c 0000      		.word	gs(param_resetId)
+ 1550 003e 0000      		.word	gs(save_data)
+ 1551 0040 0000      		.word	gs(setup_show_cam)
+ 1552 0042 0000      		.word	.LC16
+ 1553 0044 0000      		.word	.LC14
+ 1554 0046 0000      		.word	.LC14
+ 1555 0048 0000      		.word	.LC18
+ 1556 004a FF        		.byte	-1
+ 1557 004b FF        		.byte	-1
+ 1558 004c FF        		.byte	-1
+ 1559 004d 02        		.byte	2
+ 1560 004e 0000      		.word	gs(param_next)
+ 1561 0050 0000      		.word	gs(param_up)
+ 1562 0052 0000      		.word	gs(param_down)
+ 1563 0054 0000      		.word	0
+ 1564 0056 0000      		.word	gs(param_show)
+ 1565 0058 0000      		.word	.LC19
+ 1566 005a 0000      		.word	.LC20
+ 1567 005c 0000      		.word	.LC14
+ 1568 005e 0000      		.word	.LC21
+ 1569 0060 FF        		.byte	-1
+ 1570 0061 05        		.byte	5
+ 1571 0062 FF        		.byte	-1
+ 1572 0063 01        		.byte	1
+ 1573 0064 0000      		.word	0
+ 1574 0066 0000      		.word	0
+ 1575 0068 0000      		.word	0
+ 1576 006a 0000      		.word	0
+ 1577 006c 0000      		.word	0
+ 1578 006e 0000      		.word	.LC22
+ 1579 0070 0000      		.word	.LC23
+ 1580 0072 0000      		.word	.LC14
+ 1581 0074 0000      		.word	.LC24
+ 1582 0076 01        		.byte	1
+ 1583 0077 FF        		.byte	-1
+ 1584 0078 FF        		.byte	-1
+ 1585 0079 01        		.byte	1
+ 1586 007a 0000      		.word	gs(store_clear)
+ 1587 007c 0000      		.word	0
+ 1588 007e 0000      		.word	0
+ 1589 0080 0000      		.word	0
+ 1590 0082 0000      		.word	0
+ 1591               		.text
+ 1592               	.Letext0:
+ 1593               		.file 3 "/usr/lib/avr/include/stdint.h"
+ 1594               		.file 4 "/usr/lib/gcc/avr/4.9.2/include/stddef.h"
+ 1595               		.file 5 "src/hardware.h"
+ 1596               		.file 6 "src/lcd.h"
+ 1597               		.file 7 "/usr/lib/avr/include/avr/eeprom.h"
+ 1598               		.file 8 "/usr/lib/avr/include/stdio.h"
+ 1599               		.file 9 "src/adc.h"
+ 1600               		.file 10 "src/dmx.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 main.c
+     /tmp/ccP9D9Mw.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccP9D9Mw.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccP9D9Mw.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccP9D9Mw.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccP9D9Mw.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccP9D9Mw.s:12     .text:0000000000000000 store_clear
+                            *COM*:0000000000000001 active_cam
+                            *COM*:0000000000000070 cams
+     /tmp/ccP9D9Mw.s:67     .text:0000000000000036 param_resetId
+     /tmp/ccP9D9Mw.s:1461   .bss:0000000000000000 param_id
+     /tmp/ccP9D9Mw.s:87     .text:000000000000003c setup_show_cam
+     /tmp/ccP9D9Mw.s:1466   .bss:0000000000000001 setup_active_cam
+     /tmp/ccP9D9Mw.s:162    .text:0000000000000098 setup_cam_up
+     /tmp/ccP9D9Mw.s:191    .text:00000000000000b0 setup_cam_down
+     /tmp/ccP9D9Mw.s:233    .text:00000000000000c4 param_show
+                            *COM*:0000000000000002 changing_param
+     /tmp/ccP9D9Mw.s:438    .text:0000000000000206 param_next
+     /tmp/ccP9D9Mw.s:467    .text:000000000000021e param_up
+     /tmp/ccP9D9Mw.s:491    .text:0000000000000234 param_down
+     /tmp/ccP9D9Mw.s:521    .text:000000000000024a main_show
+     /tmp/ccP9D9Mw.s:642    .text:00000000000002f2 save_data
+     /tmp/ccP9D9Mw.s:1473   .eeprom:0000000000000000 backup_cams
+     /tmp/ccP9D9Mw.s:664    .text:0000000000000302 set_menu
+                            *COM*:0000000000000001 active_menu
+     /tmp/ccP9D9Mw.s:1512   .data:0000000000000000 menues
+     /tmp/ccP9D9Mw.s:752    .text:0000000000000368 process_inputs
+     /tmp/ccP9D9Mw.s:1452   .rodata:0000000000000000 CSWTCH.41
+     /tmp/ccP9D9Mw.s:1240   .text:000000000000063a process_menu
+     /tmp/ccP9D9Mw.s:1318   .text.startup:0000000000000000 main
+
+UNDEFINED SYMBOLS
+lcd_gotoxy
+itoa
+lcd_puts
+sprintf
+eeprom_write_block
+lcd_clrscr
+get_camkeys
+set_cam_leds
+set_store_led
+reset_store_led
+axis_offset
+get_storekeys
+write_dmx
+get_softkeys
+hardware_init
+eeprom_read_block
+lcd_init
+dmx_init
+ADC_Init
+__udivmodhi4
+__do_copy_data
+__do_clear_bss

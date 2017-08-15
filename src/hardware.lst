@@ -1,0 +1,644 @@
+   1               		.file	"hardware.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	hardware_init
+  12               	hardware_init:
+  13               	.LFB0:
+  14               		.file 1 "src/hardware.c"
+   1:src/hardware.c **** #include "hardware.h"
+   2:src/hardware.c **** #include <avr/io.h>
+   3:src/hardware.c **** 
+   4:src/hardware.c **** 	#define SOFTKEY_DDR DDRC
+   5:src/hardware.c **** 	#define SOFTKEY_PORT PORTC
+   6:src/hardware.c **** 	#define SOFTKEY_PIN PINC
+   7:src/hardware.c **** 
+   8:src/hardware.c **** 	#define SOFTKEY_1 0
+   9:src/hardware.c **** 	#define SOFTKEY_2 1
+  10:src/hardware.c **** 	#define SOFTKEY_3 2
+  11:src/hardware.c **** 	#define SOFTKEY_4 3
+  12:src/hardware.c **** 
+  13:src/hardware.c **** 	#define CAMKEY_DDR DDRC
+  14:src/hardware.c **** 	#define CAMKEY_PORT PORTC
+  15:src/hardware.c **** 	#define CAMKEY_PIN PINC
+  16:src/hardware.c **** 	#define CAMKEY_1 4
+  17:src/hardware.c **** 	#define CAMKEY_2 5
+  18:src/hardware.c **** 	#define CAMKEY_3 6
+  19:src/hardware.c **** 	#define CAMKEY_4 7
+  20:src/hardware.c **** 
+  21:src/hardware.c **** 	#define STOREKEY_DDR DDRD
+  22:src/hardware.c **** 	#define STOREKEY_PORT PORTD
+  23:src/hardware.c **** 	#define STOREKEY_PIN PIND
+  24:src/hardware.c **** 
+  25:src/hardware.c **** 	#define STORE_1 7
+  26:src/hardware.c **** 	#define STORE_2 6
+  27:src/hardware.c **** 	#define STORE_3 5
+  28:src/hardware.c **** 	#define STORE_4 4
+  29:src/hardware.c **** 
+  30:src/hardware.c **** 	#define LED_CAM_1_DDR DDRA
+  31:src/hardware.c **** 	#define LED_CAM_1_PORT PORTA
+  32:src/hardware.c **** 	#define LED_CAM_1 7
+  33:src/hardware.c **** 
+  34:src/hardware.c **** 	#define LED_CAM_2_DDR DDRB
+  35:src/hardware.c **** 	#define LED_CAM_2_PORT PORTB
+  36:src/hardware.c **** 	#define LED_CAM_2 7
+  37:src/hardware.c **** 
+  38:src/hardware.c **** 	#define LED_CAM_3_DDR DDRA
+  39:src/hardware.c **** 	#define LED_CAM_3_PORT PORTA
+  40:src/hardware.c **** 	#define LED_CAM_3 6
+  41:src/hardware.c **** 
+  42:src/hardware.c **** 	#define LED_CAM_4_DDR DDRD
+  43:src/hardware.c **** 	#define LED_CAM_4_PORT PORTD
+  44:src/hardware.c **** 	#define LED_CAM_4 3
+  45:src/hardware.c **** 
+  46:src/hardware.c **** 	#define LED_STORE_DDR DDRA
+  47:src/hardware.c **** 	#define LED_STORE_PORT PORTA
+  48:src/hardware.c **** 	#define LED_STORE_1 2
+  49:src/hardware.c **** 	#define LED_STORE_2 3
+  50:src/hardware.c **** 	#define LED_STORE_3 4
+  51:src/hardware.c **** 	#define LED_STORE_4 5
+  52:src/hardware.c **** 
+  53:src/hardware.c **** void hardware_init(void)
+  54:src/hardware.c **** {
+  15               		.loc 1 54 0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  55:src/hardware.c **** 	SOFTKEY_DDR &= ~((1<<SOFTKEY_1) |  (1<<SOFTKEY_2) | (1<<SOFTKEY_3) | (1<<SOFTKEY_4));
+  21               		.loc 1 55 0
+  22 0000 87B1      		in r24,0x7
+  23 0002 807F      		andi r24,lo8(-16)
+  24 0004 87B9      		out 0x7,r24
+  56:src/hardware.c **** 	SOFTKEY_PORT= (1<<SOFTKEY_1) |  (1<<SOFTKEY_2) | (1<<SOFTKEY_3) | (1<<SOFTKEY_4);
+  25               		.loc 1 56 0
+  26 0006 8FE0      		ldi r24,lo8(15)
+  27 0008 88B9      		out 0x8,r24
+  57:src/hardware.c **** 
+  58:src/hardware.c **** 	CAMKEY_DDR &=~((1<<CAMKEY_1) | (1<<CAMKEY_2) | (1<<CAMKEY_3) | (1<<CAMKEY_4)); 
+  28               		.loc 1 58 0
+  29 000a 87B1      		in r24,0x7
+  30 000c 8F70      		andi r24,lo8(15)
+  31 000e 87B9      		out 0x7,r24
+  59:src/hardware.c **** 	CAMKEY_PORT |= (1<<CAMKEY_1) | (1<<CAMKEY_2) | (1<<CAMKEY_3) | (1<<CAMKEY_4);
+  32               		.loc 1 59 0
+  33 0010 88B1      		in r24,0x8
+  34 0012 806F      		ori r24,lo8(-16)
+  35 0014 88B9      		out 0x8,r24
+  60:src/hardware.c **** 
+  61:src/hardware.c **** 	STOREKEY_DDR &=~((1<<STORE_1) | (1<<STORE_2) | (1<<STORE_3) | (1<<STORE_4)); 
+  36               		.loc 1 61 0
+  37 0016 8AB1      		in r24,0xa
+  38 0018 8F70      		andi r24,lo8(15)
+  39 001a 8AB9      		out 0xa,r24
+  62:src/hardware.c **** 	STOREKEY_PORT |= (1<<STORE_1) | (1<<STORE_2) | (1<<STORE_3) | (1<<STORE_4);
+  40               		.loc 1 62 0
+  41 001c 8BB1      		in r24,0xb
+  42 001e 806F      		ori r24,lo8(-16)
+  43 0020 8BB9      		out 0xb,r24
+  63:src/hardware.c **** 
+  64:src/hardware.c **** 	LED_STORE_DDR  |= (1<<LED_STORE_1) | (1<<LED_STORE_2) | (1<<LED_STORE_3) | (1<<LED_STORE_4); 
+  44               		.loc 1 64 0
+  45 0022 81B1      		in r24,0x1
+  46 0024 8C63      		ori r24,lo8(60)
+  47 0026 81B9      		out 0x1,r24
+  65:src/hardware.c **** 	LED_STORE_PORT |= (1<<LED_STORE_1) | (1<<LED_STORE_2) | (1<<LED_STORE_3) | (1<<LED_STORE_4);
+  48               		.loc 1 65 0
+  49 0028 82B1      		in r24,0x2
+  50 002a 8C63      		ori r24,lo8(60)
+  51 002c 82B9      		out 0x2,r24
+  66:src/hardware.c **** 
+  67:src/hardware.c **** 
+  68:src/hardware.c **** 	LED_CAM_1_DDR |= (1<<LED_CAM_1);
+  52               		.loc 1 68 0
+  53 002e 0F9A      		sbi 0x1,7
+  69:src/hardware.c **** 	LED_CAM_2_DDR |= (1<<LED_CAM_2);
+  54               		.loc 1 69 0
+  55 0030 279A      		sbi 0x4,7
+  70:src/hardware.c **** 	LED_CAM_3_DDR |= (1<<LED_CAM_3);
+  56               		.loc 1 70 0
+  57 0032 0E9A      		sbi 0x1,6
+  71:src/hardware.c **** 	LED_CAM_4_DDR |= (1<<LED_CAM_4);
+  58               		.loc 1 71 0
+  59 0034 539A      		sbi 0xa,3
+  60 0036 0895      		ret
+  61               		.cfi_endproc
+  62               	.LFE0:
+  64               	.global	get_camkeys
+  66               	get_camkeys:
+  67               	.LFB1:
+  72:src/hardware.c **** 
+  73:src/hardware.c **** 
+  74:src/hardware.c **** }
+  75:src/hardware.c **** 
+  76:src/hardware.c **** camkey_t get_camkeys(void)
+  77:src/hardware.c **** {	
+  68               		.loc 1 77 0
+  69               		.cfi_startproc
+  70               	/* prologue: function */
+  71               	/* frame size = 0 */
+  72               	/* stack size = 0 */
+  73               	.L__stack_usage = 0
+  78:src/hardware.c **** 	static uint8_t old_k1=0;
+  79:src/hardware.c **** 	static uint8_t old_k2=0;
+  80:src/hardware.c **** 	static uint8_t old_k3=0;
+  81:src/hardware.c **** 	static uint8_t old_k4=0;
+  82:src/hardware.c **** 
+  83:src/hardware.c **** 
+  84:src/hardware.c **** 	if( (CAMKEY_PIN & (1<<CAMKEY_1)) )
+  74               		.loc 1 84 0
+  75 0038 349B      		sbis 0x6,4
+  76 003a 00C0      		rjmp .L3
+  85:src/hardware.c **** 	{
+  86:src/hardware.c **** 		if(old_k1==0)
+  77               		.loc 1 86 0
+  78 003c 8091 0000 		lds r24,old_k1.1554
+  79 0040 8111      		cpse r24,__zero_reg__
+  80 0042 00C0      		rjmp .L4
+  87:src/hardware.c **** 		{
+  88:src/hardware.c **** 			old_k1=1;
+  81               		.loc 1 88 0
+  82 0044 81E0      		ldi r24,lo8(1)
+  83 0046 8093 0000 		sts old_k1.1554,r24
+  89:src/hardware.c **** 			return CAM1;
+  84               		.loc 1 89 0
+  85 004a 80E0      		ldi r24,0
+  86 004c 0895      		ret
+  87               	.L3:
+  90:src/hardware.c **** 		}
+  91:src/hardware.c **** 	}
+  92:src/hardware.c **** 	else
+  93:src/hardware.c **** 	{
+  94:src/hardware.c **** 		old_k1=0;
+  88               		.loc 1 94 0
+  89 004e 1092 0000 		sts old_k1.1554,__zero_reg__
+  90               	.L4:
+  95:src/hardware.c **** 	}
+  96:src/hardware.c **** 
+  97:src/hardware.c **** 	if( (CAMKEY_PIN & (1<<CAMKEY_2)))
+  91               		.loc 1 97 0
+  92 0052 3599      		sbic 0x6,5
+  93 0054 00C0      		rjmp .L6
+  98:src/hardware.c **** 		return CAM2;
+  99:src/hardware.c **** 	if( (CAMKEY_PIN & (1<<CAMKEY_3)))
+  94               		.loc 1 99 0
+  95 0056 3699      		sbic 0x6,6
+  96 0058 00C0      		rjmp .L7
+ 100:src/hardware.c **** 		return CAM3;
+ 101:src/hardware.c **** 	if( (CAMKEY_PIN & (1<<CAMKEY_4)))
+  97               		.loc 1 101 0
+  98 005a 3799      		sbic 0x6,7
+  99 005c 00C0      		rjmp .L8
+ 102:src/hardware.c **** 		return CAM4;
+ 103:src/hardware.c **** 	return CAM_NO_KEY;
+ 100               		.loc 1 103 0
+ 101 005e 8FEF      		ldi r24,lo8(-1)
+ 102 0060 0895      		ret
+ 103               	.L6:
+  98:src/hardware.c **** 	if( (CAMKEY_PIN & (1<<CAMKEY_3)))
+ 104               		.loc 1 98 0
+ 105 0062 81E0      		ldi r24,lo8(1)
+ 106 0064 0895      		ret
+ 107               	.L7:
+ 100:src/hardware.c **** 		return CAM3;
+ 108               		.loc 1 100 0
+ 109 0066 82E0      		ldi r24,lo8(2)
+ 110 0068 0895      		ret
+ 111               	.L8:
+ 102:src/hardware.c **** 		return CAM4;
+ 112               		.loc 1 102 0
+ 113 006a 83E0      		ldi r24,lo8(3)
+ 104:src/hardware.c **** }
+ 114               		.loc 1 104 0
+ 115 006c 0895      		ret
+ 116               		.cfi_endproc
+ 117               	.LFE1:
+ 119               	.global	get_softkeys
+ 121               	get_softkeys:
+ 122               	.LFB2:
+ 105:src/hardware.c **** 
+ 106:src/hardware.c **** softkey_t get_softkeys(void)
+ 107:src/hardware.c **** {	
+ 123               		.loc 1 107 0
+ 124               		.cfi_startproc
+ 125               	/* prologue: function */
+ 126               	/* frame size = 0 */
+ 127               	/* stack size = 0 */
+ 128               	.L__stack_usage = 0
+ 108:src/hardware.c **** 	static uint8_t old_k1=0;
+ 109:src/hardware.c **** 	static uint8_t old_k2=0;
+ 110:src/hardware.c **** 	static uint8_t old_k3=0;
+ 111:src/hardware.c **** 	static uint8_t old_k4=0;
+ 112:src/hardware.c **** 
+ 113:src/hardware.c **** 
+ 114:src/hardware.c **** 	if( (SOFTKEY_PIN & (1<<SOFTKEY_1)))
+ 129               		.loc 1 114 0
+ 130 006e 309B      		sbis 0x6,0
+ 131 0070 00C0      		rjmp .L11
+ 115:src/hardware.c **** 	{
+ 116:src/hardware.c **** 		if(old_k1==0)
+ 132               		.loc 1 116 0
+ 133 0072 8091 0000 		lds r24,old_k1.1561
+ 134 0076 8111      		cpse r24,__zero_reg__
+ 135 0078 00C0      		rjmp .L12
+ 117:src/hardware.c **** 		{
+ 118:src/hardware.c **** 			old_k1=1;
+ 136               		.loc 1 118 0
+ 137 007a 81E0      		ldi r24,lo8(1)
+ 138 007c 8093 0000 		sts old_k1.1561,r24
+ 119:src/hardware.c **** 			return SK1;
+ 139               		.loc 1 119 0
+ 140 0080 80E0      		ldi r24,0
+ 141 0082 0895      		ret
+ 142               	.L11:
+ 120:src/hardware.c **** 		}
+ 121:src/hardware.c **** 	}
+ 122:src/hardware.c **** 	else
+ 123:src/hardware.c **** 	{
+ 124:src/hardware.c **** 		old_k1=0;
+ 143               		.loc 1 124 0
+ 144 0084 1092 0000 		sts old_k1.1561,__zero_reg__
+ 145               	.L12:
+ 125:src/hardware.c **** 	}
+ 126:src/hardware.c **** 
+ 127:src/hardware.c **** 	if( (SOFTKEY_PIN & (1<<SOFTKEY_2)))
+ 146               		.loc 1 127 0
+ 147 0088 319B      		sbis 0x6,1
+ 148 008a 00C0      		rjmp .L14
+ 128:src/hardware.c **** 	{
+ 129:src/hardware.c **** 		if(old_k2==0)
+ 149               		.loc 1 129 0
+ 150 008c 8091 0000 		lds r24,old_k2.1562
+ 151 0090 8111      		cpse r24,__zero_reg__
+ 152 0092 00C0      		rjmp .L15
+ 130:src/hardware.c **** 		{
+ 131:src/hardware.c **** 			old_k2=1;
+ 153               		.loc 1 131 0
+ 154 0094 81E0      		ldi r24,lo8(1)
+ 155 0096 8093 0000 		sts old_k2.1562,r24
+ 132:src/hardware.c **** 			return SK2;
+ 156               		.loc 1 132 0
+ 157 009a 0895      		ret
+ 158               	.L14:
+ 133:src/hardware.c **** 		}
+ 134:src/hardware.c **** 	}
+ 135:src/hardware.c **** 	else
+ 136:src/hardware.c **** 	{
+ 137:src/hardware.c **** 		old_k2=0;
+ 159               		.loc 1 137 0
+ 160 009c 1092 0000 		sts old_k2.1562,__zero_reg__
+ 161               	.L15:
+ 138:src/hardware.c **** 	}
+ 139:src/hardware.c **** 
+ 140:src/hardware.c **** 
+ 141:src/hardware.c **** 	if( (SOFTKEY_PIN & (1<<SOFTKEY_3)))
+ 162               		.loc 1 141 0
+ 163 00a0 329B      		sbis 0x6,2
+ 164 00a2 00C0      		rjmp .L16
+ 142:src/hardware.c **** 	{
+ 143:src/hardware.c **** 		if(old_k3==0)
+ 165               		.loc 1 143 0
+ 166 00a4 8091 0000 		lds r24,old_k3.1563
+ 167 00a8 8111      		cpse r24,__zero_reg__
+ 168 00aa 00C0      		rjmp .L17
+ 144:src/hardware.c **** 		{
+ 145:src/hardware.c **** 			old_k3=1;
+ 169               		.loc 1 145 0
+ 170 00ac 81E0      		ldi r24,lo8(1)
+ 171 00ae 8093 0000 		sts old_k3.1563,r24
+ 146:src/hardware.c **** 			return SK3;
+ 172               		.loc 1 146 0
+ 173 00b2 82E0      		ldi r24,lo8(2)
+ 174 00b4 0895      		ret
+ 175               	.L16:
+ 147:src/hardware.c **** 		}
+ 148:src/hardware.c **** 	}
+ 149:src/hardware.c **** 	else
+ 150:src/hardware.c **** 	{
+ 151:src/hardware.c **** 		old_k3=0;
+ 176               		.loc 1 151 0
+ 177 00b6 1092 0000 		sts old_k3.1563,__zero_reg__
+ 178               	.L17:
+ 152:src/hardware.c **** 	}
+ 153:src/hardware.c **** 
+ 154:src/hardware.c **** 
+ 155:src/hardware.c **** if( (SOFTKEY_PIN & (1<<SOFTKEY_4)))
+ 179               		.loc 1 155 0
+ 180 00ba 339B      		sbis 0x6,3
+ 181 00bc 00C0      		rjmp .L18
+ 156:src/hardware.c **** 	{
+ 157:src/hardware.c **** 		if(old_k4==0)
+ 182               		.loc 1 157 0
+ 183 00be 8091 0000 		lds r24,old_k4.1564
+ 184 00c2 8111      		cpse r24,__zero_reg__
+ 185 00c4 00C0      		rjmp .L19
+ 158:src/hardware.c **** 		{
+ 159:src/hardware.c **** 			old_k4=1;
+ 186               		.loc 1 159 0
+ 187 00c6 81E0      		ldi r24,lo8(1)
+ 188 00c8 8093 0000 		sts old_k4.1564,r24
+ 160:src/hardware.c **** 			return SK4;
+ 189               		.loc 1 160 0
+ 190 00cc 83E0      		ldi r24,lo8(3)
+ 191 00ce 0895      		ret
+ 192               	.L18:
+ 161:src/hardware.c **** 		}
+ 162:src/hardware.c **** 	}
+ 163:src/hardware.c **** 	else
+ 164:src/hardware.c **** 	{
+ 165:src/hardware.c **** 		old_k4=0;
+ 193               		.loc 1 165 0
+ 194 00d0 1092 0000 		sts old_k4.1564,__zero_reg__
+ 195               	.L19:
+ 166:src/hardware.c **** 	}
+ 167:src/hardware.c **** 
+ 168:src/hardware.c **** 
+ 169:src/hardware.c **** 
+ 170:src/hardware.c **** 	return NO_KEY;
+ 196               		.loc 1 170 0
+ 197 00d4 8FEF      		ldi r24,lo8(-1)
+ 171:src/hardware.c **** }
+ 198               		.loc 1 171 0
+ 199 00d6 0895      		ret
+ 200               		.cfi_endproc
+ 201               	.LFE2:
+ 203               	.global	get_storekeys
+ 205               	get_storekeys:
+ 206               	.LFB3:
+ 172:src/hardware.c **** 
+ 173:src/hardware.c **** storekey_t get_storekeys(void)
+ 174:src/hardware.c **** {	
+ 207               		.loc 1 174 0
+ 208               		.cfi_startproc
+ 209               	/* prologue: function */
+ 210               	/* frame size = 0 */
+ 211               	/* stack size = 0 */
+ 212               	.L__stack_usage = 0
+ 175:src/hardware.c **** 
+ 176:src/hardware.c **** 	if( (STOREKEY_PIN & (1<<STORE_1)))
+ 213               		.loc 1 176 0
+ 214 00d8 4F99      		sbic 0x9,7
+ 215 00da 00C0      		rjmp .L22
+ 177:src/hardware.c **** 		return STORE1;
+ 178:src/hardware.c **** 	if( (STOREKEY_PIN & (1<<STORE_2)))
+ 216               		.loc 1 178 0
+ 217 00dc 4E99      		sbic 0x9,6
+ 218 00de 00C0      		rjmp .L23
+ 179:src/hardware.c **** 		return STORE2;
+ 180:src/hardware.c **** 	if( (STOREKEY_PIN & (1<<STORE_3)))
+ 219               		.loc 1 180 0
+ 220 00e0 4D99      		sbic 0x9,5
+ 221 00e2 00C0      		rjmp .L24
+ 181:src/hardware.c **** 		return STORE3;
+ 182:src/hardware.c **** 	if( (STOREKEY_PIN & (1<<STORE_4)))
+ 222               		.loc 1 182 0
+ 223 00e4 4C99      		sbic 0x9,4
+ 224 00e6 00C0      		rjmp .L25
+ 183:src/hardware.c **** 		return STORE4;
+ 184:src/hardware.c **** 	return STORE_NO_KEY;
+ 225               		.loc 1 184 0
+ 226 00e8 8FEF      		ldi r24,lo8(-1)
+ 227 00ea 0895      		ret
+ 228               	.L22:
+ 177:src/hardware.c **** 	if( (STOREKEY_PIN & (1<<STORE_2)))
+ 229               		.loc 1 177 0
+ 230 00ec 80E0      		ldi r24,0
+ 231 00ee 0895      		ret
+ 232               	.L23:
+ 179:src/hardware.c **** 	if( (STOREKEY_PIN & (1<<STORE_3)))
+ 233               		.loc 1 179 0
+ 234 00f0 81E0      		ldi r24,lo8(1)
+ 235 00f2 0895      		ret
+ 236               	.L24:
+ 181:src/hardware.c **** 	if( (STOREKEY_PIN & (1<<STORE_4)))
+ 237               		.loc 1 181 0
+ 238 00f4 82E0      		ldi r24,lo8(2)
+ 239 00f6 0895      		ret
+ 240               	.L25:
+ 183:src/hardware.c **** 	return STORE_NO_KEY;
+ 241               		.loc 1 183 0
+ 242 00f8 83E0      		ldi r24,lo8(3)
+ 185:src/hardware.c **** }
+ 243               		.loc 1 185 0
+ 244 00fa 0895      		ret
+ 245               		.cfi_endproc
+ 246               	.LFE3:
+ 248               	.global	set_store_led
+ 250               	set_store_led:
+ 251               	.LFB4:
+ 186:src/hardware.c **** 
+ 187:src/hardware.c **** void set_store_led(uint8_t led)
+ 188:src/hardware.c **** {
+ 252               		.loc 1 188 0
+ 253               		.cfi_startproc
+ 254               	.LVL0:
+ 255               	/* prologue: function */
+ 256               	/* frame size = 0 */
+ 257               	/* stack size = 0 */
+ 258               	.L__stack_usage = 0
+ 189:src/hardware.c **** 	switch(led)
+ 259               		.loc 1 189 0
+ 260 00fc 8130      		cpi r24,lo8(1)
+ 261 00fe 01F0      		breq .L28
+ 262 0100 00F0      		brlo .L29
+ 263 0102 8230      		cpi r24,lo8(2)
+ 264 0104 01F0      		breq .L30
+ 265 0106 8330      		cpi r24,lo8(3)
+ 266 0108 01F0      		breq .L31
+ 267 010a 0895      		ret
+ 268               	.L29:
+ 190:src/hardware.c **** 	{
+ 191:src/hardware.c **** 		case 0: LED_STORE_PORT &=~(1<<LED_STORE_1); break;
+ 269               		.loc 1 191 0
+ 270 010c 1298      		cbi 0x2,2
+ 271 010e 0895      		ret
+ 272               	.L28:
+ 192:src/hardware.c **** 		case 1: LED_STORE_PORT &=~(1<<LED_STORE_2); break;
+ 273               		.loc 1 192 0
+ 274 0110 1398      		cbi 0x2,3
+ 275 0112 0895      		ret
+ 276               	.L30:
+ 193:src/hardware.c **** 		case 2: LED_STORE_PORT &=~(1<<LED_STORE_3); break;
+ 277               		.loc 1 193 0
+ 278 0114 1498      		cbi 0x2,4
+ 279 0116 0895      		ret
+ 280               	.L31:
+ 194:src/hardware.c **** 		case 3: LED_STORE_PORT &=~(1<<LED_STORE_4); break;
+ 281               		.loc 1 194 0
+ 282 0118 1598      		cbi 0x2,5
+ 283 011a 0895      		ret
+ 284               		.cfi_endproc
+ 285               	.LFE4:
+ 287               	.global	reset_store_led
+ 289               	reset_store_led:
+ 290               	.LFB5:
+ 195:src/hardware.c **** 	}	
+ 196:src/hardware.c **** }
+ 197:src/hardware.c **** 
+ 198:src/hardware.c **** void reset_store_led(uint8_t led)
+ 199:src/hardware.c **** {
+ 291               		.loc 1 199 0
+ 292               		.cfi_startproc
+ 293               	.LVL1:
+ 294               	/* prologue: function */
+ 295               	/* frame size = 0 */
+ 296               	/* stack size = 0 */
+ 297               	.L__stack_usage = 0
+ 200:src/hardware.c **** 	switch(led)
+ 298               		.loc 1 200 0
+ 299 011c 8130      		cpi r24,lo8(1)
+ 300 011e 01F0      		breq .L34
+ 301 0120 00F0      		brlo .L35
+ 302 0122 8230      		cpi r24,lo8(2)
+ 303 0124 01F0      		breq .L36
+ 304 0126 8330      		cpi r24,lo8(3)
+ 305 0128 01F0      		breq .L37
+ 306 012a 0895      		ret
+ 307               	.L35:
+ 201:src/hardware.c **** 	{
+ 202:src/hardware.c **** 		case 0: LED_STORE_PORT |= (1<<LED_STORE_1); break;
+ 308               		.loc 1 202 0
+ 309 012c 129A      		sbi 0x2,2
+ 310 012e 0895      		ret
+ 311               	.L34:
+ 203:src/hardware.c **** 		case 1: LED_STORE_PORT |= (1<<LED_STORE_2); break;
+ 312               		.loc 1 203 0
+ 313 0130 139A      		sbi 0x2,3
+ 314 0132 0895      		ret
+ 315               	.L36:
+ 204:src/hardware.c **** 		case 2: LED_STORE_PORT |= (1<<LED_STORE_3); break;
+ 316               		.loc 1 204 0
+ 317 0134 149A      		sbi 0x2,4
+ 318 0136 0895      		ret
+ 319               	.L37:
+ 205:src/hardware.c **** 		case 3: LED_STORE_PORT |= (1<<LED_STORE_4); break;
+ 320               		.loc 1 205 0
+ 321 0138 159A      		sbi 0x2,5
+ 322 013a 0895      		ret
+ 323               		.cfi_endproc
+ 324               	.LFE5:
+ 326               	.global	set_cam_leds
+ 328               	set_cam_leds:
+ 329               	.LFB6:
+ 206:src/hardware.c **** 	}	
+ 207:src/hardware.c **** }
+ 208:src/hardware.c **** 
+ 209:src/hardware.c **** void set_cam_leds(uint8_t active)
+ 210:src/hardware.c **** {
+ 330               		.loc 1 210 0
+ 331               		.cfi_startproc
+ 332               	.LVL2:
+ 333               	/* prologue: function */
+ 334               	/* frame size = 0 */
+ 335               	/* stack size = 0 */
+ 336               	.L__stack_usage = 0
+ 211:src/hardware.c **** 	switch(active)
+ 337               		.loc 1 211 0
+ 338 013c 8130      		cpi r24,lo8(1)
+ 339 013e 01F0      		breq .L40
+ 340 0140 00F0      		brlo .L41
+ 341 0142 8230      		cpi r24,lo8(2)
+ 342 0144 01F0      		breq .L42
+ 343 0146 8330      		cpi r24,lo8(3)
+ 344 0148 01F0      		breq .L43
+ 345 014a 0895      		ret
+ 346               	.L41:
+ 212:src/hardware.c **** 	{
+ 213:src/hardware.c **** 		case 0: LED_CAM_1_PORT &=~(1<<LED_CAM_1);
+ 347               		.loc 1 213 0
+ 348 014c 1798      		cbi 0x2,7
+ 214:src/hardware.c **** 				LED_CAM_2_PORT |= (1<<LED_CAM_2);
+ 349               		.loc 1 214 0
+ 350 014e 2F9A      		sbi 0x5,7
+ 351 0150 00C0      		rjmp .L45
+ 352               	.L40:
+ 215:src/hardware.c **** 				LED_CAM_3_PORT |= (1<<LED_CAM_3);
+ 216:src/hardware.c **** 				LED_CAM_4_PORT |= (1<<LED_CAM_4);
+ 217:src/hardware.c **** 				break;
+ 218:src/hardware.c **** 		case 1: LED_CAM_1_PORT |= (1<<LED_CAM_1);
+ 353               		.loc 1 218 0
+ 354 0152 179A      		sbi 0x2,7
+ 219:src/hardware.c **** 				LED_CAM_2_PORT &=~(1<<LED_CAM_2);
+ 355               		.loc 1 219 0
+ 356 0154 2F98      		cbi 0x5,7
+ 357               	.L45:
+ 220:src/hardware.c **** 				LED_CAM_3_PORT |= (1<<LED_CAM_3);
+ 358               		.loc 1 220 0
+ 359 0156 169A      		sbi 0x2,6
+ 360 0158 00C0      		rjmp .L44
+ 361               	.L42:
+ 221:src/hardware.c **** 				LED_CAM_4_PORT |= (1<<LED_CAM_4);
+ 222:src/hardware.c **** 				break;
+ 223:src/hardware.c **** 		case 2: LED_CAM_1_PORT |= (1<<LED_CAM_1);
+ 362               		.loc 1 223 0
+ 363 015a 179A      		sbi 0x2,7
+ 224:src/hardware.c **** 				LED_CAM_2_PORT |= (1<<LED_CAM_2);
+ 364               		.loc 1 224 0
+ 365 015c 2F9A      		sbi 0x5,7
+ 225:src/hardware.c **** 				LED_CAM_3_PORT &=~(1<<LED_CAM_3);
+ 366               		.loc 1 225 0
+ 367 015e 1698      		cbi 0x2,6
+ 368               	.L44:
+ 226:src/hardware.c **** 				LED_CAM_4_PORT |= (1<<LED_CAM_4);
+ 369               		.loc 1 226 0
+ 370 0160 5B9A      		sbi 0xb,3
+ 227:src/hardware.c **** 				break;
+ 371               		.loc 1 227 0
+ 372 0162 0895      		ret
+ 373               	.L43:
+ 228:src/hardware.c **** 		case 3: LED_CAM_1_PORT |= (1<<LED_CAM_1);
+ 374               		.loc 1 228 0
+ 375 0164 179A      		sbi 0x2,7
+ 229:src/hardware.c **** 				LED_CAM_2_PORT |= (1<<LED_CAM_2);
+ 376               		.loc 1 229 0
+ 377 0166 2F9A      		sbi 0x5,7
+ 230:src/hardware.c **** 				LED_CAM_3_PORT |= (1<<LED_CAM_3);
+ 378               		.loc 1 230 0
+ 379 0168 169A      		sbi 0x2,6
+ 231:src/hardware.c **** 				LED_CAM_4_PORT &=~(1<<LED_CAM_4);
+ 380               		.loc 1 231 0
+ 381 016a 5B98      		cbi 0xb,3
+ 382 016c 0895      		ret
+ 383               		.cfi_endproc
+ 384               	.LFE6:
+ 386               		.local	old_k4.1564
+ 387               		.comm	old_k4.1564,1,1
+ 388               		.local	old_k3.1563
+ 389               		.comm	old_k3.1563,1,1
+ 390               		.local	old_k2.1562
+ 391               		.comm	old_k2.1562,1,1
+ 392               		.local	old_k1.1561
+ 393               		.comm	old_k1.1561,1,1
+ 394               		.local	old_k1.1554
+ 395               		.comm	old_k1.1554,1,1
+ 396               	.Letext0:
+ 397               		.file 2 "/usr/lib/avr/include/stdint.h"
+ 398               		.file 3 "src/hardware.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 hardware.c
+     /tmp/cclpgOJA.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cclpgOJA.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cclpgOJA.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cclpgOJA.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cclpgOJA.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cclpgOJA.s:12     .text:0000000000000000 hardware_init
+     /tmp/cclpgOJA.s:66     .text:0000000000000038 get_camkeys
+     /tmp/cclpgOJA.s:393    .bss:0000000000000004 old_k1.1554
+     /tmp/cclpgOJA.s:121    .text:000000000000006e get_softkeys
+     /tmp/cclpgOJA.s:391    .bss:0000000000000003 old_k1.1561
+     /tmp/cclpgOJA.s:389    .bss:0000000000000002 old_k2.1562
+     /tmp/cclpgOJA.s:387    .bss:0000000000000001 old_k3.1563
+                             .bss:0000000000000000 old_k4.1564
+     /tmp/cclpgOJA.s:205    .text:00000000000000d8 get_storekeys
+     /tmp/cclpgOJA.s:250    .text:00000000000000fc set_store_led
+     /tmp/cclpgOJA.s:289    .text:000000000000011c reset_store_led
+     /tmp/cclpgOJA.s:328    .text:000000000000013c set_cam_leds
+
+UNDEFINED SYMBOLS
+__do_clear_bss

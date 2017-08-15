@@ -1,0 +1,38 @@
+#ifndef __HARDWARE_H
+#define __HARDWARE_H
+
+#include <stdint.h>
+
+	typedef enum {
+		NO_KEY=255,
+		SK1=0,
+		SK2=1,
+		SK3=2,
+		SK4=3
+	} softkey_t;
+
+	typedef enum {
+		CAM_NO_KEY = 255,
+		CAM1 = 0,
+		CAM2 = 1,
+		CAM3 = 2,
+		CAM4 = 3
+	} camkey_t;
+
+	typedef enum {
+		STORE_NO_KEY = 255,
+		STORE1 = 0,
+		STORE2 = 1,
+		STORE3 = 2,
+		STORE4 = 3
+	} storekey_t;
+
+	void hardware_init(void);
+	softkey_t get_softkeys(void);
+	camkey_t get_camkeys(void);
+	storekey_t get_storekey(void);
+	void set_store_led(uint8_t led);
+	void reset_store_led(uint8_t led);
+	void set_cam_leds(uint8_t active);
+
+#endif
