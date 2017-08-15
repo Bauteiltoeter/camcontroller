@@ -36,7 +36,7 @@ typedef struct
 } menu_t;
 
 //Struct for cam data
-#define PARAM_COUNT 5
+#define PARAM_COUNT 7
 #define CAM_COUNT 4
 #define STORE_COUNT 4
 typedef struct  {
@@ -45,6 +45,8 @@ typedef struct  {
 	uint16_t tilt_address;	//Offset of tilt address from base
 	uint16_t pan_invert;	//Invert pan? (0/1)
 	uint16_t tilt_invert;	//Invert tilt? (0/1)
+	uint16_t pan_scaling;  
+	uint16_t tilt_scaling;
 	uint8_t pan;			//Pan value (send over DMX)
 	uint8_t tilt;			//Tilt value (send over DMX)
 
@@ -66,6 +68,7 @@ void save_data(void);
 void set_menu(menu_identifiers menu);
 void process_menu(void);
 void process_inputs(void);
+void update_leds(void);
 
 
 //###########################
@@ -133,6 +136,7 @@ int main (void)
 	dmx_init();
 	ADC_Init();
 
+	set_cam_leds(active_cam);
 	uint16_t blink_counter=0;
 	while(1)
 	{
@@ -164,6 +168,26 @@ int main (void)
 	}
 }
 
+void update_leds(void)
+{
+	//update the store leds if the leds are not flashing
+	if( ! (active_menu == MENU_STORE || active_menu == MENU_CLEAR))
+	{
+		for(int i=0; i < STORE_COUNT; i++)
+		{
+			//0xFFFF marks an empty store
+			if(cams[active_cam].store_pan[i]!= 0xFFFF && cams[active_cam].store_tilt[i]!= 0xFFFF)
+			{
+				set_store_led(i);
+			}
+			else
+			{
+				reset_store_led(i);
+			}
+		}
+	}
+
+}
 
 
 
@@ -188,57 +212,53 @@ void process_inputs(void)
 		//camera leds
 		set_cam_leds(active_cam);
 
-		//update the store leds if the leds are not flashing
-		if( ! (active_menu == MENU_STORE || active_menu == MENU_CLEAR))
-		{
-			for(int i=0; i < STORE_COUNT; i++)
-			{
-				//0xFFFF marks an empty store
-				if(cams[active_cam].store_pan[i]!= 0xFFFF && cams[active_cam].store_tilt[i]!= 0xFFFF)
-				{
-					set_store_led(i);
-				}
-				else
-				{
-					reset_store_led(i);
-				}
-			}
-		}
+		update_leds();
 
 		//main screen
 		if(active_menu == MENU_MAIN)
 			main_show();
 
 	}
+
+	static uint8_t analog=0;
+
 	
-	//fetch joystick deflection and calculate new pan
-	int16_t diff = axis_offset(0);
-	if(cams[active_cam].pan_invert)
-	{
-		diff=-diff;
-	}
-	uint8_t old_pan = cams[active_cam].pan;
-	if( (int16_t)cams[active_cam].pan+diff > 255)
-		cams[active_cam].pan=255;
-	else if( (int16_t)cams[active_cam].pan+diff < 0)
-		cams[active_cam].pan=0;
-	else
-		cams[active_cam].pan+=diff	;
-
-	//fetch joystick deflection and calculate new tilt
-	diff = -axis_offset(1);
-	if(cams[active_cam].tilt_invert)
-	{
-		diff=-diff;
-	}
-
+	
 	uint8_t old_tilt = cams[active_cam].tilt;
-	if( (int16_t)cams[active_cam].tilt+diff > 255)
-		cams[active_cam].tilt=255;
-	else if( (int16_t)cams[active_cam].tilt+diff < 0)
-		cams[active_cam].tilt=0;
-	else
-		cams[active_cam].tilt+=diff	;
+uint8_t old_pan = cams[active_cam].pan;
+	
+	analog++;
+	if(analog%8==0)
+	{
+		//fetch joystick deflection and calculate new pan
+		int16_t diff = axis_offset(0, cams[active_cam].pan_scaling);
+		if(cams[active_cam].pan_invert)
+		{
+			diff=-diff;
+		}
+	
+		if( (int16_t)cams[active_cam].pan+diff > 255)
+			cams[active_cam].pan=255;
+		else if( (int16_t)cams[active_cam].pan+diff < 0)
+			cams[active_cam].pan=0;
+		else
+			cams[active_cam].pan+=diff	;
+
+		//fetch joystick deflection and calculate new tilt
+		diff = -axis_offset(1, cams[active_cam].tilt_scaling);
+		if(cams[active_cam].tilt_invert)
+		{
+			diff=-diff;
+		}
+
+
+		if( (int16_t)cams[active_cam].tilt+diff > 255)
+			cams[active_cam].tilt=255;
+		else if( (int16_t)cams[active_cam].tilt+diff < 0)
+			cams[active_cam].tilt=0;
+		else
+			cams[active_cam].tilt+=diff	;
+	}
 
 	//fetch store key selection from hardware
 	storekey_t store = get_storekeys();
@@ -353,6 +373,7 @@ void set_menu(menu_identifiers menu)
 	if(menues[menu].init)
 		menues[menu].init();
 
+	update_leds();
 
 }
 
@@ -443,6 +464,13 @@ void param_show(void)
 		case 4: lcd_puts("invert tilt         "); 
 				changing_param=&cams[setup_active_cam].tilt_invert;
 				break;
+		case 5: lcd_puts("pan scaling         "); 
+				changing_param=&cams[setup_active_cam].pan_scaling;
+				break;
+		case 6: lcd_puts("tilt scaling        "); 
+				changing_param=&cams[setup_active_cam].tilt_scaling;
+				break;
+	
 		
 	}
 

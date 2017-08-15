@@ -9,7 +9,7 @@
    9               		.cfi_sections	.debug_frame
   10               	.global	ADC_Init
   12               	ADC_Init:
-  13               	.LFB7:
+  13               	.LFB8:
   14               		.file 1 "src/adc.c"
    1:src/adc.c     **** 
    2:src/adc.c     **** #include <avr/interrupt.h>
@@ -18,176 +18,228 @@
    5:src/adc.c     **** #define F_CPU 16000000
    6:src/adc.c     **** #include <util/delay.h>
    7:src/adc.c     **** #include "adc.h"
-   8:src/adc.c     **** 
-   9:src/adc.c     **** /* ADC initialisieren */
-  10:src/adc.c     **** void ADC_Init(void)
-  11:src/adc.c     **** {
-  15               		.loc 1 11 0
+   8:src/adc.c     **** #include "lcd.h"
+   9:src/adc.c     **** 
+  10:src/adc.c     **** /* ADC initialisieren */
+  11:src/adc.c     **** void ADC_Init(void)
+  12:src/adc.c     **** {
+  15               		.loc 1 12 0
   16               		.cfi_startproc
   17               	/* prologue: function */
   18               	/* frame size = 0 */
   19               	/* stack size = 0 */
   20               	.L__stack_usage = 0
-  12:src/adc.c     ****   // die Versorgungsspannung AVcc als Referenz wählen:
-  13:src/adc.c     ****   ADMUX = (1<<REFS0);    
-  21               		.loc 1 13 0
+  13:src/adc.c     ****   // die Versorgungsspannung AVcc als Referenz wählen:
+  14:src/adc.c     ****   ADMUX = (1<<REFS0);    
+  21               		.loc 1 14 0
   22 0000 80E4      		ldi r24,lo8(64)
   23 0002 8093 7C00 		sts 124,r24
-  14:src/adc.c     ****   // oder interne Referenzspannung als Referenz für den ADC wählen:
-  15:src/adc.c     ****   // ADMUX = (1<<REFS1) | (1<<REFS0);
-  16:src/adc.c     **** 
-  17:src/adc.c     ****   // Bit ADFR ("free running") in ADCSRA steht beim Einschalten
-  18:src/adc.c     ****   // schon auf 0, also single conversion
-  19:src/adc.c     ****   ADCSRA = (1<<ADPS1) | (1<<ADPS0);     // Frequenzvorteiler
-  24               		.loc 1 19 0
+  15:src/adc.c     ****   // oder interne Referenzspannung als Referenz für den ADC wählen:
+  16:src/adc.c     ****   // ADMUX = (1<<REFS1) | (1<<REFS0);
+  17:src/adc.c     **** 
+  18:src/adc.c     ****   // Bit ADFR ("free running") in ADCSRA steht beim Einschalten
+  19:src/adc.c     ****   // schon auf 0, also single conversion
+  20:src/adc.c     ****   ADCSRA = (1<<ADPS1) | (1<<ADPS0);     // Frequenzvorteiler
+  24               		.loc 1 20 0
   25 0006 83E0      		ldi r24,lo8(3)
   26 0008 8093 7A00 		sts 122,r24
-  20:src/adc.c     ****   ADCSRA |= (1<<ADEN);                  // ADC aktivieren
-  27               		.loc 1 20 0
+  21:src/adc.c     ****   ADCSRA |= (1<<ADEN);                  // ADC aktivieren
+  27               		.loc 1 21 0
   28 000c 8091 7A00 		lds r24,122
   29 0010 8068      		ori r24,lo8(-128)
   30 0012 8093 7A00 		sts 122,r24
-  21:src/adc.c     **** 
-  22:src/adc.c     ****   /* nach Aktivieren des ADC wird ein "Dummy-Readout" empfohlen, man liest
-  23:src/adc.c     ****      also einen Wert und verwirft diesen, um den ADC "warmlaufen zu lassen" */
-  24:src/adc.c     **** 
-  25:src/adc.c     ****   ADCSRA |= (1<<ADSC);                  // eine ADC-Wandlung 
-  31               		.loc 1 25 0
+  22:src/adc.c     **** 
+  23:src/adc.c     ****   /* nach Aktivieren des ADC wird ein "Dummy-Readout" empfohlen, man liest
+  24:src/adc.c     ****      also einen Wert und verwirft diesen, um den ADC "warmlaufen zu lassen" */
+  25:src/adc.c     **** 
+  26:src/adc.c     ****   ADCSRA |= (1<<ADSC);                  // eine ADC-Wandlung 
+  31               		.loc 1 26 0
   32 0016 8091 7A00 		lds r24,122
   33 001a 8064      		ori r24,lo8(64)
   34 001c 8093 7A00 		sts 122,r24
   35               	.L2:
-  26:src/adc.c     ****   while (ADCSRA & (1<<ADSC) ) {         // auf Abschluss der Konvertierung warten
-  36               		.loc 1 26 0 discriminator 1
+  27:src/adc.c     ****   while (ADCSRA & (1<<ADSC) ) {         // auf Abschluss der Konvertierung warten
+  36               		.loc 1 27 0 discriminator 1
   37 0020 8091 7A00 		lds r24,122
   38 0024 86FD      		sbrc r24,6
   39 0026 00C0      		rjmp .L2
-  27:src/adc.c     ****   }
-  28:src/adc.c     ****   /* ADCW muss einmal gelesen werden, sonst wird Ergebnis der nächsten
-  29:src/adc.c     ****      Wandlung nicht übernommen. */
-  30:src/adc.c     ****   (void) ADCW;
-  40               		.loc 1 30 0
+  28:src/adc.c     ****   }
+  29:src/adc.c     ****   /* ADCW muss einmal gelesen werden, sonst wird Ergebnis der nächsten
+  30:src/adc.c     ****      Wandlung nicht übernommen. */
+  31:src/adc.c     ****   (void) ADCW;
+  40               		.loc 1 31 0
   41 0028 8091 7800 		lds r24,120
   42 002c 9091 7900 		lds r25,120+1
   43 0030 0895      		ret
   44               		.cfi_endproc
-  45               	.LFE7:
+  45               	.LFE8:
   47               	.global	ADC_Read
   49               	ADC_Read:
-  50               	.LFB8:
-  31:src/adc.c     **** }
-  32:src/adc.c     **** 
-  33:src/adc.c     **** uint16_t ADC_Read( uint8_t channel )
-  34:src/adc.c     **** {
-  51               		.loc 1 34 0
+  50               	.LFB9:
+  32:src/adc.c     **** }
+  33:src/adc.c     **** 
+  34:src/adc.c     **** uint16_t ADC_Read( uint8_t channel )
+  35:src/adc.c     **** {
+  51               		.loc 1 35 0
   52               		.cfi_startproc
   53               	.LVL0:
   54               	/* prologue: function */
   55               	/* frame size = 0 */
   56               	/* stack size = 0 */
   57               	.L__stack_usage = 0
-  35:src/adc.c     ****   // Kanal waehlen, ohne andere Bits zu beeinflußen
-  36:src/adc.c     ****   ADMUX = (ADMUX & ~(0x1F)) | (channel & 0x1F);
-  58               		.loc 1 36 0
+  36:src/adc.c     ****   // Kanal waehlen, ohne andere Bits zu beeinflußen
+  37:src/adc.c     ****   ADMUX = (ADMUX & ~(0x1F)) | (channel & 0x1F);
+  58               		.loc 1 37 0
   59 0032 9091 7C00 		lds r25,124
   60 0036 8F71      		andi r24,lo8(31)
   61               	.LVL1:
   62 0038 907E      		andi r25,lo8(-32)
   63 003a 892B      		or r24,r25
   64 003c 8093 7C00 		sts 124,r24
-  37:src/adc.c     ****   ADCSRA |= (1<<ADSC);            // eine Wandlung "single conversion"
-  65               		.loc 1 37 0
+  38:src/adc.c     ****   ADCSRA |= (1<<ADSC);            // eine Wandlung "single conversion"
+  65               		.loc 1 38 0
   66 0040 8091 7A00 		lds r24,122
   67 0044 8064      		ori r24,lo8(64)
   68 0046 8093 7A00 		sts 122,r24
   69               	.L6:
-  38:src/adc.c     ****   while (ADCSRA & (1<<ADSC) ) {   // auf Abschluss der Konvertierung warten
-  70               		.loc 1 38 0 discriminator 1
+  39:src/adc.c     ****   while (ADCSRA & (1<<ADSC) ) {   // auf Abschluss der Konvertierung warten
+  70               		.loc 1 39 0 discriminator 1
   71 004a 8091 7A00 		lds r24,122
   72 004e 86FD      		sbrc r24,6
   73 0050 00C0      		rjmp .L6
-  39:src/adc.c     ****   }
-  40:src/adc.c     ****   return ADCW;                    // ADC auslesen und zurückgeben
-  74               		.loc 1 40 0
+  40:src/adc.c     ****   }
+  41:src/adc.c     ****   return ADCW;                    // ADC auslesen und zurückgeben
+  74               		.loc 1 41 0
   75 0052 8091 7800 		lds r24,120
   76 0056 9091 7900 		lds r25,120+1
-  41:src/adc.c     **** }
-  77               		.loc 1 41 0
+  42:src/adc.c     **** }
+  77               		.loc 1 42 0
   78 005a 0895      		ret
   79               		.cfi_endproc
-  80               	.LFE8:
+  80               	.LFE9:
   82               	.global	axis_offset
   84               	axis_offset:
-  85               	.LFB9:
-  42:src/adc.c     **** 
-  43:src/adc.c     **** int16_t axis_offset(uint8_t channel)
-  44:src/adc.c     **** {
-  86               		.loc 1 44 0
+  85               	.LFB10:
+  43:src/adc.c     **** 
+  44:src/adc.c     **** int16_t axis_offset(uint8_t channel, uint16_t scaling)
+  45:src/adc.c     **** {
+  86               		.loc 1 45 0
   87               		.cfi_startproc
   88               	.LVL2:
-  89               	/* prologue: function */
-  90               	/* frame size = 0 */
-  91               	/* stack size = 0 */
-  92               	.L__stack_usage = 0
-  45:src/adc.c     **** 	int16_t value = ADC_Read(channel);
-  93               		.loc 1 45 0
-  94 005c 0E94 0000 		call ADC_Read
-  95               	.LVL3:
-  46:src/adc.c     **** 
+  89 005c 0F93      		push r16
+  90               	.LCFI0:
+  91               		.cfi_def_cfa_offset 3
+  92               		.cfi_offset 16, -2
+  93 005e 1F93      		push r17
+  94               	.LCFI1:
+  95               		.cfi_def_cfa_offset 4
+  96               		.cfi_offset 17, -3
+  97 0060 CF93      		push r28
+  98               	.LCFI2:
+  99               		.cfi_def_cfa_offset 5
+ 100               		.cfi_offset 28, -4
+ 101 0062 DF93      		push r29
+ 102               	.LCFI3:
+ 103               		.cfi_def_cfa_offset 6
+ 104               		.cfi_offset 29, -5
+ 105               	/* prologue: function */
+ 106               	/* frame size = 0 */
+ 107               	/* stack size = 4 */
+ 108               	.L__stack_usage = 4
+ 109 0064 EB01      		movw r28,r22
+  46:src/adc.c     **** 	int32_t value = ADC_Read(channel);
+ 110               		.loc 1 46 0
+ 111 0066 0E94 0000 		call ADC_Read
+ 112               	.LVL3:
+ 113 006a A0E0      		ldi r26,0
+ 114 006c B0E0      		ldi r27,0
+ 115               	.LVL4:
   47:src/adc.c     **** 
-  48:src/adc.c     **** 	value-=504;
-  96               		.loc 1 48 0
-  97 0060 885F      		subi r24,-8
-  98 0062 9140      		sbci r25,1
-  99               	.LVL4:
-  49:src/adc.c     **** 
-  50:src/adc.c     **** 	if(value < -10 || value > 10)
- 100               		.loc 1 50 0
- 101 0064 9C01      		movw r18,r24
- 102 0066 265F      		subi r18,-10
- 103 0068 3F4F      		sbci r19,-1
- 104 006a 2531      		cpi r18,21
- 105 006c 3105      		cpc r19,__zero_reg__
- 106 006e 00F0      		brlo .L10
- 107               	.LVL5:
-  51:src/adc.c     **** 	{
-  52:src/adc.c     **** 		value/=200;
-  53:src/adc.c     **** 		return value;
- 108               		.loc 1 53 0
- 109 0070 68EC      		ldi r22,lo8(-56)
- 110 0072 70E0      		ldi r23,0
- 111 0074 0E94 0000 		call __divmodhi4
- 112               	.LVL6:
- 113 0078 CB01      		movw r24,r22
- 114 007a 0895      		ret
- 115               	.LVL7:
- 116               	.L10:
-  54:src/adc.c     **** 	}
+  48:src/adc.c     **** 
+  49:src/adc.c     **** 	value-=504;
+ 116               		.loc 1 49 0
+ 117 006e BC01      		movw r22,r24
+ 118 0070 CD01      		movw r24,r26
+ 119 0072 685F      		subi r22,-8
+ 120 0074 7140      		sbci r23,1
+ 121 0076 8109      		sbc r24,__zero_reg__
+ 122 0078 9109      		sbc r25,__zero_reg__
+ 123               	.LVL5:
+  50:src/adc.c     **** 
+  51:src/adc.c     **** 	//char tmp[21];
+  52:src/adc.c     **** 	//sprintf(tmp,"%ld     ",value);
+  53:src/adc.c     **** 	//lcd_gotoxy(0,0);
+  54:src/adc.c     **** 	////lcd_puts(tmp);
   55:src/adc.c     **** 
-  56:src/adc.c     **** 	return 0;
- 117               		.loc 1 56 0
- 118 007c 80E0      		ldi r24,0
- 119 007e 90E0      		ldi r25,0
- 120               	.LVL8:
-  57:src/adc.c     **** 
-  58:src/adc.c     **** 
-  59:src/adc.c     **** }
- 121               		.loc 1 59 0
- 122 0080 0895      		ret
- 123               		.cfi_endproc
- 124               	.LFE9:
- 126               	.Letext0:
- 127               		.file 2 "/usr/lib/avr/include/stdint.h"
+  56:src/adc.c     **** 
+  57:src/adc.c     **** 	if(value < -10 || value > 10)
+ 124               		.loc 1 57 0
+ 125 007a 8B01      		movw r16,r22
+ 126 007c 9C01      		movw r18,r24
+ 127 007e 065F      		subi r16,-10
+ 128 0080 1F4F      		sbci r17,-1
+ 129 0082 2F4F      		sbci r18,-1
+ 130 0084 3F4F      		sbci r19,-1
+ 131 0086 0531      		cpi r16,21
+ 132 0088 1105      		cpc r17,__zero_reg__
+ 133 008a 2105      		cpc r18,__zero_reg__
+ 134 008c 3105      		cpc r19,__zero_reg__
+ 135 008e 00F0      		brlo .L10
+ 136               	.LVL6:
+  58:src/adc.c     **** 	{
+  59:src/adc.c     **** 		value/=scaling;
+ 137               		.loc 1 59 0
+ 138 0090 9E01      		movw r18,r28
+ 139 0092 40E0      		ldi r20,0
+ 140 0094 50E0      		ldi r21,0
+ 141 0096 0E94 0000 		call __divmodsi4
+ 142               	.LVL7:
+  60:src/adc.c     **** 
+  61:src/adc.c     **** 		//char tmp[21];
+  62:src/adc.c     **** 		//sprintf(tmp,"%ld     ",value);
+  63:src/adc.c     **** 		//lcd_gotoxy(0,1);
+  64:src/adc.c     **** 		//lcd_puts(tmp);
+  65:src/adc.c     **** 
+  66:src/adc.c     **** 	
+  67:src/adc.c     **** 		return value;
+ 143               		.loc 1 67 0
+ 144 009a C901      		movw r24,r18
+ 145 009c 00C0      		rjmp .L9
+ 146               	.LVL8:
+ 147               	.L10:
+  68:src/adc.c     **** 	}
+  69:src/adc.c     **** 
+  70:src/adc.c     **** 	return 0;
+ 148               		.loc 1 70 0
+ 149 009e 80E0      		ldi r24,0
+ 150 00a0 90E0      		ldi r25,0
+ 151               	.LVL9:
+ 152               	.L9:
+ 153               	/* epilogue start */
+  71:src/adc.c     **** 
+  72:src/adc.c     **** 
+  73:src/adc.c     **** }
+ 154               		.loc 1 73 0
+ 155 00a2 DF91      		pop r29
+ 156 00a4 CF91      		pop r28
+ 157               	.LVL10:
+ 158 00a6 1F91      		pop r17
+ 159 00a8 0F91      		pop r16
+ 160 00aa 0895      		ret
+ 161               		.cfi_endproc
+ 162               	.LFE10:
+ 164               	.Letext0:
+ 165               		.file 2 "/usr/lib/avr/include/stdint.h"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 adc.c
-     /tmp/ccGujS7y.s:2      *ABS*:000000000000003e __SP_H__
-     /tmp/ccGujS7y.s:3      *ABS*:000000000000003d __SP_L__
-     /tmp/ccGujS7y.s:4      *ABS*:000000000000003f __SREG__
-     /tmp/ccGujS7y.s:5      *ABS*:0000000000000000 __tmp_reg__
-     /tmp/ccGujS7y.s:6      *ABS*:0000000000000001 __zero_reg__
-     /tmp/ccGujS7y.s:12     .text:0000000000000000 ADC_Init
-     /tmp/ccGujS7y.s:49     .text:0000000000000032 ADC_Read
-     /tmp/ccGujS7y.s:84     .text:000000000000005c axis_offset
+     /tmp/ccSpwI7H.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccSpwI7H.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccSpwI7H.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccSpwI7H.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccSpwI7H.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccSpwI7H.s:12     .text:0000000000000000 ADC_Init
+     /tmp/ccSpwI7H.s:49     .text:0000000000000032 ADC_Read
+     /tmp/ccSpwI7H.s:84     .text:000000000000005c axis_offset
 
 UNDEFINED SYMBOLS
-__divmodhi4
+__divmodsi4

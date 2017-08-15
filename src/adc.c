@@ -5,6 +5,7 @@
 #define F_CPU 16000000
 #include <util/delay.h>
 #include "adc.h"
+#include "lcd.h"
 
 /* ADC initialisieren */
 void ADC_Init(void)
@@ -40,16 +41,29 @@ uint16_t ADC_Read( uint8_t channel )
   return ADCW;                    // ADC auslesen und zurückgeben
 }
 
-int16_t axis_offset(uint8_t channel)
+int16_t axis_offset(uint8_t channel, uint16_t scaling)
 {
-	int16_t value = ADC_Read(channel);
+	int32_t value = ADC_Read(channel);
 
 
 	value-=504;
 
+	//char tmp[21];
+	//sprintf(tmp,"%ld     ",value);
+	//lcd_gotoxy(0,0);
+	////lcd_puts(tmp);
+
+
 	if(value < -10 || value > 10)
 	{
-		value/=200;
+		value/=scaling;
+
+		//char tmp[21];
+		//sprintf(tmp,"%ld     ",value);
+		//lcd_gotoxy(0,1);
+		//lcd_puts(tmp);
+
+	
 		return value;
 	}
 

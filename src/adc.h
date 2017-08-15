@@ -7,5 +7,5 @@ void ADC_Init(void);
 
 uint16_t ADC_Read( uint8_t channel);
 
-int16_t axis_offset(uint8_t channel);
+int16_t axis_offset(uint8_t channel, uint16_t scaling);
 #endif
