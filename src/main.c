@@ -3,6 +3,8 @@
 #include <avr/eeprom.h>
 #include <stdio.h>
 #include <util/delay.h>
+#include <stdio.h>
+#include <string.h>
 #include "lcd.h"
 #include "dmx.h"
 #include "adc.h"
@@ -17,6 +19,12 @@ typedef enum {
 	MENU_EDIT_CAM = 3,
 	MENU_STORE = 4,
 	MENU_CLEAR = 5,
+	MENU_GENERAL_SETUP = 6,
+	MENU_RESET = 7,
+	MENU_CTRL = 8,
+	MENU_CTRL_EDIT = 9,
+	MENU_LOCKED = 10,
+	MENU_LOCK_SETUP = 11,
 	MENU_INVALID = 255
 } menu_identifiers;
 
@@ -36,7 +44,7 @@ typedef struct
 } menu_t;
 
 //Struct for cam data
-#define PARAM_COUNT 7
+#define PARAM_COUNT 8
 #define CAM_COUNT 4
 #define STORE_COUNT 4
 typedef struct  {
@@ -47,8 +55,12 @@ typedef struct  {
 	uint16_t tilt_invert;	//Invert tilt? (0/1)
 	uint16_t pan_scaling;  
 	uint16_t tilt_scaling;
+	uint16_t switch_address;
 	uint8_t pan;			//Pan value (send over DMX)
 	uint8_t tilt;			//Tilt value (send over DMX)
+	uint8_t button_state;
+	uint8_t power_state;
+	
 
 	uint16_t store_pan[STORE_COUNT];	//Stored positions
 	uint16_t store_tilt[STORE_COUNT];
@@ -69,15 +81,102 @@ void set_menu(menu_identifiers menu);
 void process_menu(void);
 void process_inputs(void);
 void update_leds(void);
+void load_default(void);
 
+void ctrl_cam_up(void);
+void ctrl_cam_down(void);
+void ctrl_cam_show(void);
+
+void cam_power_on(void);
+void cam_power_off(void);
+void cam_button(void);
+void cam_power_show(void);
+
+void send_switch(void);
+
+void setup_menu_next(void);
+void setup_menu_prev(void);
+void setup_menu_enter(void);
+void setup_menu_show(void);
+void setup_reset(void);
+
+void lock_1_pressed(void);
+void lock_2_pressed(void);
+void lock_3_pressed(void);
+void lock_4_pressed(void);
+void lock_pressed(uint8_t n);
 
 //###########################
 //  Global variables
 //###########################
 menu_identifiers active_menu;
+
+
+cam_data_t cams_default[CAM_COUNT] = 
+{
+	{
+		.base_addr = 0,
+		.pan_address = 0,
+		.tilt_address = 2,
+		.pan_invert = 0,
+		.tilt_invert=0,
+		.pan_scaling = 30,
+		.tilt_scaling = 20,
+		.pan = 0, 
+		.tilt = 0,
+		.switch_address = 4,
+		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
+	},	
+	{
+		.base_addr = 16,
+		.pan_address = 0,
+		.tilt_address = 2,
+		.pan_invert = 0,
+		.tilt_invert=0,
+		.pan_scaling = 30,
+		.tilt_scaling = 20,
+		.switch_address = 4,
+		.pan = 0, 
+		.tilt = 0,
+		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
+	},
+	{
+		.base_addr = 32,
+		.pan_address = 0,
+		.tilt_address = 2,
+		.pan_invert = 0,
+		.tilt_invert=0,
+		.pan_scaling = 30,
+		.tilt_scaling = 20,
+		.switch_address = 4,
+		.pan = 0, 
+		.tilt = 0,
+		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
+	},
+	{
+		.base_addr = 0xFFFF,
+		.pan_address = 0xFFFF,
+		.tilt_address = 0xFFFF,
+		.pan_invert = 0xFFFF,
+		.tilt_invert=0xFFFF,
+		.pan_scaling = 0xFFFF,
+		.tilt_scaling = 0xFFFF,
+		.switch_address = 4,
+		.pan = 0xFFFF, 
+		.tilt = 0xFFFF,
+		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
+	} 
+};
 cam_data_t cams[CAM_COUNT];	//Data for each cam
 cam_data_t backup_cams[CAM_COUNT] EEMEM; //store CAM Data in eeprom
 uint8_t active_cam; //remember the active cam
+
+uint8_t code[] = {1,1,1,1};
+uint8_t code_eeprom[4] EEMEM;
 
 //Define the menu structure
 menu_t menues[] =
@@ -90,14 +189,14 @@ menu_t menues[] =
     },
 	{ //MENU_MAIN
 		.lines = { "DragonVideo        ","                    ","                    ","STORE          SETUP"},
-		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_SETUP},
+		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP},
 		.cb    = { NULL,NULL,NULL,NULL},
 		.init  = main_show
 	},
 	{ //MENU_SETUP
-		.lines = { "Setup              ","                    ","                    ","PREV NEXT MOD.  BACK"},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_EDIT_CAM,MENU_MAIN},
-		.cb    = { setup_cam_down,setup_cam_up,param_resetId,save_data},
+		.lines = { "Setup              ","                    ","                    ","PREV NEXT EDIT  BACK"},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_EDIT_CAM,MENU_GENERAL_SETUP},
+		.cb    = { setup_cam_down,setup_cam_up,param_resetId,NULL},
 		.init =  setup_show_cam
 	},
 	{ //MENU_EDIT_CAM
@@ -117,9 +216,73 @@ menu_t menues[] =
 		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN},
 		.cb    = { store_clear,NULL, NULL, NULL},
 		.init  = NULL
+	}, 
+	{ //MENU_GENERAL_SETUP
+		.lines = { "Choose setup menu  ","                    ","                    ","PREV NEXT ENTER BACK"},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN},
+		.cb    = { setup_menu_prev,setup_menu_next, setup_menu_enter, save_data},
+		.init  = setup_reset
+	}, 
+	{ //MENU_RESET
+		.lines = { "Setup              ","Load default config ","and erase all data? ","YES             BACK"},
+		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN},
+		.cb    = { load_default,NULL, NULL, NULL},
+		.init  = NULL
+	},  
+	{ //MENU_CTRL
+		.lines = { "Setup              ","                    ","                    ","PREV NEXT CTRL  BACK"},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_GENERAL_SETUP},
+		.cb    = { ctrl_cam_down,ctrl_cam_up, NULL, NULL},
+		.init  = ctrl_cam_show
+	},  
+	{ //MENU_CTRL_EDIT
+		.lines = { "Setup              ","                    ","  Power             "," ON  OFF   BTN  BACK"},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_CTRL},
+		.cb    = { cam_power_on,cam_power_off, cam_button, NULL},
+		.init  = cam_power_show
+	} ,  
+	{ //MENU_LOCKED
+		.lines = { "    DragonVideo    ","  **** LOCKED ****  ","                    "," 1    2     3     4 "},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
+		.cb    = { lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed},
+		.init  = NULL
+	} ,  
+	{ //MENU_LOCK_SETUP
+		.lines = { "Setup              ","Enter new code:     ","                    "," 1    2     3     4 "},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
+		.cb    = {lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed},
+		.init  = NULL
 	}
 };
 
+typedef struct {
+	menu_identifiers menu;
+	char* description;
+
+} setting_menu_t;
+
+setting_menu_t setting_menues[] = {
+	{
+		.menu = MENU_SETUP,
+		.description = "Camera setup        "
+	},
+	{
+		.menu = MENU_CTRL,
+		.description = "Camera controlling  "
+	},
+	{
+		.menu = MENU_LOCKED,
+		.description = "Lock cam controller "
+	},
+	{
+		.menu = MENU_LOCK_SETUP,
+		.description = "Enter lock code     "
+	},
+	{
+		.menu = MENU_RESET,
+		.description = "Reset settings      "
+	}
+};
 
 
 
@@ -130,11 +293,14 @@ int main (void)
 	//initialise stuff
 	hardware_init();
 	eeprom_read_block (cams, backup_cams, sizeof(cams));
+	eeprom_read_block (code, code_eeprom, sizeof(code));
 
 	lcd_init(LCD_DISP_ON);
 	set_menu(MENU_SPLASH);
 	dmx_init();
 	ADC_Init();
+
+	send_switch();
 
 	set_cam_leds(active_cam);
 	uint16_t blink_counter=0;
@@ -142,9 +308,13 @@ int main (void)
 	{
 		blink_counter++;
 
-		//Process analog inputs, cam changes and store requests
-		process_inputs();
-		
+
+		if(active_menu != MENU_LOCKED)
+		{
+			//Process analog inputs, cam changes and store requests
+			process_inputs();
+		}
+
 		//Process the menu system  / softkeys
 		process_menu();
 		
@@ -449,25 +619,26 @@ void param_show(void)
 	{
 		case 0: lcd_puts("base_addr           "); 
 				changing_param=&cams[setup_active_cam].base_addr;
-		
 				break;
 		case 1: lcd_puts("pan offset          "); 
 				changing_param=&cams[setup_active_cam].pan_address;
-		
 				break;
 		case 2: lcd_puts("tilt offset         "); 
 				changing_param=&cams[setup_active_cam].tilt_address;
 				break;
-		case 3: lcd_puts("invert pan          "); 
+		case 3: lcd_puts("switch offset       ");
+				changing_param=&cams[setup_active_cam].switch_address;
+				break;
+		case 4: lcd_puts("invert pan          "); 
 				changing_param=&cams[setup_active_cam].pan_invert;
 				break;
-		case 4: lcd_puts("invert tilt         "); 
+		case 5: lcd_puts("invert tilt         "); 
 				changing_param=&cams[setup_active_cam].tilt_invert;
 				break;
-		case 5: lcd_puts("pan scaling         "); 
+		case 6: lcd_puts("pan scaling         "); 
 				changing_param=&cams[setup_active_cam].pan_scaling;
 				break;
-		case 6: lcd_puts("tilt scaling        "); 
+		case 7: lcd_puts("tilt scaling        "); 
 				changing_param=&cams[setup_active_cam].tilt_scaling;
 				break;
 	
@@ -489,8 +660,265 @@ void param_resetId(void)
 void save_data(void)
 {
 	eeprom_write_block (cams, backup_cams, sizeof(cams));
+	eeprom_write_block (code, code_eeprom, sizeof(code));
+}
+
+void load_default(void)
+{
+	memcpy(cams,cams_default, sizeof(cams)); 
+	save_data();
+}
+
+uint8_t ctrl_selected_cam=0;
+
+
+void ctrl_cam_up(void)
+{
+	ctrl_selected_cam++;
+
+	if(ctrl_selected_cam>=CAM_COUNT)
+	{
+		ctrl_selected_cam=0;
+	}
+
+	ctrl_cam_show();
 
 }
+
+void ctrl_cam_down(void)
+{
+	ctrl_selected_cam--;
+
+	if(ctrl_selected_cam>=CAM_COUNT)
+	{
+		ctrl_selected_cam=CAM_COUNT-1;
+	}
+
+	ctrl_cam_show();
+}
+
+void ctrl_cam_show(void)
+{
+	lcd_gotoxy(0,1);
+	lcd_puts("Controll CAM ");
+	
+	lcd_gotoxy(13,1);
+	char str[10];
+	itoa(ctrl_selected_cam+1, str, 10);
+	lcd_puts(str);
+}
+
+void cam_power_on(void)
+{
+	cams[ctrl_selected_cam].power_state=1;
+	cam_power_show();
+}
+
+void cam_power_off(void)
+{
+	cams[ctrl_selected_cam].power_state=0;
+	cam_power_show();
+}
+
+void cam_button(void)
+{
+	if(cams[ctrl_selected_cam].button_state)
+	{
+		cams[ctrl_selected_cam].button_state=0;
+	}
+	else
+	{
+	
+		cams[ctrl_selected_cam].button_state=1;
+	}
+
+cam_power_show();
+}
+
+void cam_power_show(void)
+{
+	if(cams[ctrl_selected_cam].power_state)
+	{
+		lcd_gotoxy(0,3);
+		lcd_putc('>');
+		lcd_gotoxy(3,3);
+		lcd_putc('<');
+		lcd_putc(' ');
+		lcd_gotoxy(8,3);
+		lcd_putc(' ');
+	}
+	else
+	{
+		lcd_gotoxy(0,3);
+		lcd_putc(' ');
+		lcd_gotoxy(3,3);
+		lcd_putc(' ');
+		lcd_putc('>');
+		lcd_gotoxy(8,3);
+		lcd_putc('<');
+	}
+
+	if(cams[ctrl_selected_cam].button_state)
+	{
+		cams[ctrl_selected_cam].button_state=1;
+		lcd_gotoxy(10,3);
+		lcd_putc('>');
+		lcd_gotoxy(14,3);
+		lcd_putc('<');
+
+	}
+	else
+	{
+		lcd_gotoxy(10,3);
+		lcd_putc(' ');
+		lcd_gotoxy(14,3);
+		lcd_putc(' ');
+
+	}
+
+	send_switch();
+}
+
+void send_switch(void)
+{
+	uint8_t dmx;
+
+	if(!cams[ctrl_selected_cam].button_state && !cams[ctrl_selected_cam].power_state)
+		dmx=0;
+	else if(!cams[ctrl_selected_cam].button_state && cams[ctrl_selected_cam].power_state)
+		dmx=64;
+	else if(cams[ctrl_selected_cam].button_state && !cams[ctrl_selected_cam].power_state)
+		dmx=128;
+	else if(cams[ctrl_selected_cam].button_state && cams[ctrl_selected_cam].power_state)
+		dmx=255;
+
+//	lcd_gotoxy(0,0);
+	char rofl[20];
+
+	itoa(dmx, rofl, 10);
+//	lcd_puts(rofl);
+//	lcd_puts("     ");
+
+	write_dmx(cams[ctrl_selected_cam].base_addr + cams[ctrl_selected_cam].switch_address, dmx);
+}
+
+uint8_t current_menu=0;
+
+void setup_menu_next(void)
+{
+	current_menu++;
+
+	if(current_menu >= (sizeof(setting_menues)/sizeof(setting_menu_t)))
+	{
+		current_menu=0;
+	}
+
+	setup_menu_show();
+}
+
+void setup_menu_prev(void)
+{
+	current_menu--;
+
+	if(current_menu >=(sizeof(setting_menues)/sizeof(setting_menu_t)))
+	{
+		current_menu=(sizeof(setting_menues)/sizeof(setting_menu_t))-1;
+	}
+
+	setup_menu_show();
+}
+
+void setup_menu_enter(void)
+{
+	set_menu(setting_menues[current_menu].menu);
+}
+
+void setup_menu_show(void)
+{
+	lcd_gotoxy(0,1);
+	lcd_puts(setting_menues[current_menu].description);
+}
+
+void lock_1_pressed(void)
+{
+	lock_pressed(1);
+}
+
+void lock_2_pressed(void)
+{
+	lock_pressed(2);
+}
+
+void lock_3_pressed(void)
+{
+	lock_pressed(3);
+}
+
+void lock_4_pressed(void)
+{
+	lock_pressed(4);
+}
+
+void lock_pressed(uint8_t n)
+{
+	static uint8_t index=0;
+	static uint8_t numbers[4];
+
+	lcd_gotoxy(8+index,2);
+
+	if(active_menu == MENU_LOCK_SETUP)
+		lcd_putc('0'+n);
+	else
+		lcd_putc('*');
+
+	numbers[index]=n;
+	index++;
+	
+	if(index==4)
+	{
+		index=0;
+	
+		if(active_menu == MENU_LOCK_SETUP)
+		{
+			for(uint8_t i=0; i < 4; i++)
+			{
+				code[i]=numbers[i];
+				set_menu(MENU_GENERAL_SETUP);
+			}
+		}
+		else
+		{
+			uint8_t error=0;
+			for(uint8_t i=0; i < 4; i++)
+			{
+				if(code[i]!=numbers[i])
+					error=1;
+
+			}
+
+			if(error==0)
+			{
+				set_menu(MENU_MAIN);
+			}
+			else
+			{
+				lcd_gotoxy(8,2);
+				lcd_puts("    ");
+			}
+		}
+	}
+}
+
+void setup_reset(void)
+{
+	current_menu=0;
+	setup_menu_show();
+}
+
+
+
+
+
 
 
 
