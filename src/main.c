@@ -3,6 +3,8 @@
 #include <avr/eeprom.h>
 #include <stdio.h>
 #include <util/delay.h>
+	#include <stdlib.h>
+
 #include <stdio.h>
 #include <string.h>
 #include "lcd.h"
@@ -43,21 +45,22 @@ typedef struct
 	
 } menu_t;
 
-//Struct for cam data
-#define PARAM_COUNT 8
+
 #define CAM_COUNT 4
 #define STORE_COUNT 4
 typedef struct  {
 	uint16_t base_addr;		//DMX base address
 	uint16_t pan_address;	//Offset of pan address from base
 	uint16_t tilt_address;	//Offset of tilt address from base
-	uint16_t pan_invert;	//Invert pan? (0/1)
-	uint16_t tilt_invert;	//Invert tilt? (0/1)
+	uint16_t speed_address;
+	uint16_t switch_address;
+	uint8_t pan_invert;	//Invert pan? (0/1)
+	uint8_t tilt_invert;	//Invert tilt? (0/1)
 	uint16_t pan_scaling;  
 	uint16_t tilt_scaling;
-	uint16_t switch_address;
 	uint8_t pan;			//Pan value (send over DMX)
 	uint8_t tilt;			//Tilt value (send over DMX)
+	uint8_t speed;
 	uint8_t button_state;
 	uint8_t power_state;
 	
@@ -65,6 +68,88 @@ typedef struct  {
 	uint16_t store_pan[STORE_COUNT];	//Stored positions
 	uint16_t store_tilt[STORE_COUNT];
 } cam_data_t;
+
+typedef enum {
+	type_uint16,
+	type_uint8
+} parameter_type;
+
+typedef struct {
+	char* name;
+	parameter_type type;
+	size_t offset;
+	uint16_t min;
+	uint16_t max;
+} cam_setup_parameters_t;
+
+
+#define NUMBER_OF_CAM_PARAMETERS  (sizeof(cam_setup_parameters)/sizeof(cam_setup_parameters_t))
+cam_setup_parameters_t cam_setup_parameters[] = 
+{
+	{
+		.name = "base_addr           ",
+		.type = type_uint16,
+		.offset = offsetof(cam_data_t, base_addr),
+		.min = 0,
+		.max = 512
+	},
+	{
+		.name = "pan address         ",
+		.type = type_uint16,
+		.offset = offsetof(cam_data_t, pan_address),
+		.min = 0,
+		.max = 512
+	},
+	{
+		.name = "tilt address       ",
+		.type = type_uint16,
+		.offset = offsetof(cam_data_t, tilt_address),
+		.min = 0,
+		.max = 512
+	},
+	{
+		.name = "speed address       ",
+		.type = type_uint16,
+		.offset = offsetof(cam_data_t, speed_address),
+		.min = 0,
+		.max = 512
+	},
+	{
+		.name = "switch address      ",
+		.type = type_uint16,
+		.offset = offsetof(cam_data_t, switch_address),
+		.min = 0,
+		.max = 512
+	},
+	{
+		.name = "invert pan          ",
+		.type = type_uint8,
+		.offset = offsetof(cam_data_t, pan_invert),
+		.min = 0,
+		.max = 1
+	},
+	{
+		.name = "invert tilt         ",
+		.type = type_uint8,
+		.offset = offsetof(cam_data_t, tilt_invert),
+		.min = 0,
+		.max = 1
+	},
+	{
+		.name = "pan scaling         ",
+		.type = type_uint16,
+		.offset = offsetof(cam_data_t, pan_scaling),
+		.min = 0,
+		.max = 100
+	},
+	{
+		.name = "tilt scaling        ",
+		.type = type_uint16,
+		.offset = offsetof(cam_data_t, tilt_scaling),
+		.min = 0,
+		.max = 100
+	}
+};
 
 void setup_cam_up(void);
 void setup_cam_down(void);
@@ -549,7 +634,7 @@ void set_menu(menu_identifiers menu)
 
 uint8_t setup_active_cam=0;
 uint8_t param_id=0;
-uint16_t* changing_param;
+
 
 void setup_show_cam(void)
 {
@@ -585,7 +670,7 @@ void param_next(void)
 {
 	param_id++;
 
-	if(param_id>=PARAM_COUNT)
+	if(param_id>=NUMBER_OF_CAM_PARAMETERS)
 		param_id=0;
 
 	param_show();
@@ -593,13 +678,33 @@ void param_next(void)
 
 void param_up(void)
 {
-	(*changing_param)++;
+	switch(cam_setup_parameters[param_id].type)
+	{
+		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))++; 
+						 if(*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+							*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
+		break;
+		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))++; 
+					    if(*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+						   *(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
+		break;
+	}
 	param_show();	
 }
 
 void param_down(void)
 {
-	(*changing_param)--;
+	switch(cam_setup_parameters[param_id].type)
+	{
+		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))--; 
+						 if(*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+							*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
+		break;
+		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))--; 
+					    if(*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+						   *(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
+		break;
+	}
 	param_show();	
 }
 
@@ -612,44 +717,21 @@ void param_show(void)
 	lcd_gotoxy(18,0);
 	lcd_puts(tmp);
 
-
 	lcd_gotoxy(0,1);
-	char toDraw[20];
-	switch(param_id)
+	lcd_puts(cam_setup_parameters[param_id].name);
+
+	switch(cam_setup_parameters[param_id].type)
 	{
-		case 0: lcd_puts("base_addr           "); 
-				changing_param=&cams[setup_active_cam].base_addr;
-				break;
-		case 1: lcd_puts("pan offset          "); 
-				changing_param=&cams[setup_active_cam].pan_address;
-				break;
-		case 2: lcd_puts("tilt offset         "); 
-				changing_param=&cams[setup_active_cam].tilt_address;
-				break;
-		case 3: lcd_puts("switch offset       ");
-				changing_param=&cams[setup_active_cam].switch_address;
-				break;
-		case 4: lcd_puts("invert pan          "); 
-				changing_param=&cams[setup_active_cam].pan_invert;
-				break;
-		case 5: lcd_puts("invert tilt         "); 
-				changing_param=&cams[setup_active_cam].tilt_invert;
-				break;
-		case 6: lcd_puts("pan scaling         "); 
-				changing_param=&cams[setup_active_cam].pan_scaling;
-				break;
-		case 7: lcd_puts("tilt scaling        "); 
-				changing_param=&cams[setup_active_cam].tilt_scaling;
-				break;
-	
-		
+		case type_uint16: itoa( *(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
+		case type_uint8: itoa( *(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
 	}
 
-	itoa(*changing_param,toDraw,10);
+
 	lcd_gotoxy(0,2);
-	lcd_puts("                 ");
+	lcd_puts("                    ");
 	lcd_gotoxy(0,2);
-	lcd_puts(toDraw);
+	lcd_puts(tmp);
+
 }
 
 void param_resetId(void)
@@ -732,7 +814,7 @@ void cam_button(void)
 		cams[ctrl_selected_cam].button_state=1;
 	}
 
-cam_power_show();
+	cam_power_show();
 }
 
 void cam_power_show(void)
