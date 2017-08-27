@@ -47,8 +47,8 @@
 	#define LED_STORE_PORT PORTA
 	#define LED_STORE_1 2
 	#define LED_STORE_2 3
-	#define LED_STORE_3 4
-	#define LED_STORE_4 5
+	#define LED_STORE_3 2
+	#define LED_STORE_4 3
 
 void hardware_init(void)
 {
@@ -184,6 +184,11 @@ storekey_t get_storekeys(void)
 	return STORE_NO_KEY;
 }
 
+rotselkey_t get_rotselkey(void)
+{
+	return ROTSEL1;
+}
+
 void set_store_led(uint8_t led)
 {
 	switch(led)
@@ -230,7 +235,6 @@ void set_cam_leds(uint8_t active)
 				LED_CAM_3_PORT |= (1<<LED_CAM_3);
 				LED_CAM_4_PORT &=~(1<<LED_CAM_4);
 				break;
-
 	}
 }
 

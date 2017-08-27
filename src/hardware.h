@@ -27,10 +27,19 @@
 		STORE4 = 3
 	} storekey_t;
 
+	typedef enum {
+		ROTSEL_NO_KEY = 255,
+		ROTSEL1 = 0,
+		ROTSEL2 = 1,
+		ROTSEL3 = 2,
+		ROTSEL4 = 3
+	} rotselkey_t;
+
 	void hardware_init(void);
 	softkey_t get_softkeys(void);
 	camkey_t get_camkeys(void);
 	storekey_t get_storekey(void);
+	rotselkey_t get_rotselkey(void);
 	void set_store_led(uint8_t led);
 	void reset_store_led(uint8_t led);
 	void set_cam_leds(uint8_t active);

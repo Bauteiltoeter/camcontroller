@@ -11,7 +11,7 @@
 #include "dmx.h"
 #include "adc.h"
 #include "hardware.h"
-
+#include "rotary.h"
 
 
 typedef enum {
@@ -203,13 +203,15 @@ cam_data_t cams_default[CAM_COUNT] =
 		.base_addr = 0,
 		.pan_address = 0,
 		.tilt_address = 2,
+		.speed_address = 4,
+		.switch_address = 5,
 		.pan_invert = 0,
 		.tilt_invert=0,
 		.pan_scaling = 30,
 		.tilt_scaling = 20,
 		.pan = 0, 
 		.tilt = 0,
-		.switch_address = 4,
+		.speed = 0,
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
 	},	
@@ -217,13 +219,15 @@ cam_data_t cams_default[CAM_COUNT] =
 		.base_addr = 16,
 		.pan_address = 0,
 		.tilt_address = 2,
+		.speed_address = 4,
+		.switch_address = 5,
 		.pan_invert = 0,
 		.tilt_invert=0,
 		.pan_scaling = 30,
 		.tilt_scaling = 20,
-		.switch_address = 4,
 		.pan = 0, 
 		.tilt = 0,
+		.speed = 0,
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
 	},
@@ -231,13 +235,15 @@ cam_data_t cams_default[CAM_COUNT] =
 		.base_addr = 32,
 		.pan_address = 0,
 		.tilt_address = 2,
+		.speed_address = 4,
+		.switch_address = 5,
 		.pan_invert = 0,
 		.tilt_invert=0,
 		.pan_scaling = 30,
 		.tilt_scaling = 20,
-		.switch_address = 4,
 		.pan = 0, 
 		.tilt = 0,
+		.speed = 0,
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
 	},
@@ -245,13 +251,15 @@ cam_data_t cams_default[CAM_COUNT] =
 		.base_addr = 0xFFFF,
 		.pan_address = 0xFFFF,
 		.tilt_address = 0xFFFF,
+		.speed_address = 0xFFFF,
+		.switch_address = 0xFFFF,
 		.pan_invert = 0xFFFF,
 		.tilt_invert=0xFFFF,
 		.pan_scaling = 0xFFFF,
 		.tilt_scaling = 0xFFFF,
-		.switch_address = 4,
 		.pan = 0xFFFF, 
 		.tilt = 0xFFFF,
+		.speed = 0xFFFF,
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
 	} 
@@ -273,7 +281,7 @@ menu_t menues[] =
 		.init =  NULL
     },
 	{ //MENU_MAIN
-		.lines = { "DragonVideo        ","                    ","                    ","STORE          SETUP"},
+		.lines = { "                   ","                    ","                    ","STORE          SETUP"},
 		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP},
 		.cb    = { NULL,NULL,NULL,NULL},
 		.init  = main_show
@@ -384,42 +392,66 @@ int main (void)
 	set_menu(MENU_SPLASH);
 	dmx_init();
 	ADC_Init();
+	rotary_init();
 
 	send_switch();
 
 	set_cam_leds(active_cam);
 	uint16_t blink_counter=0;
+
+	uint8_t loop=0;
+
+	rotary_config_t test;
+
+	test.type=rotary_uint8;
+	test.data_u8 = &cams[0].pan;
+	test.change = main_show;
+	test.min = 10;
+	test.max = 20;
+
+	rotary_setconfig(&test);
+	
 	while(1)
 	{
 		blink_counter++;
+		loop++;
 
+		if(loop==10)
+		{  
+			if(active_menu != MENU_LOCKED)
+			{
+				//Process analog inputs, cam changes and store requests
+				process_inputs();
+			}
 
-		if(active_menu != MENU_LOCKED)
-		{
-			//Process analog inputs, cam changes and store requests
-			process_inputs();
-		}
-
-		//Process the menu system  / softkeys
-		process_menu();
+			//Process the menu system  / softkeys
+			process_menu();
 		
 
-		//The STORE-LEDs should flash if MENU_STORE or MENU_CLEAR is selected
-		if((active_menu == MENU_STORE || active_menu == MENU_CLEAR) && blink_counter % 20 == 0)
-		{
-			for(int i=0; i < STORE_COUNT; i++)
-				reset_store_led(i);
+			//The STORE-LEDs should flash if MENU_STORE or MENU_CLEAR is selected
+			if((active_menu == MENU_STORE || active_menu == MENU_CLEAR) && blink_counter % 20 == 0)
+			{
+				for(int i=0; i < STORE_COUNT; i++)
+					reset_store_led(i);
+			}
+
+			if((active_menu == MENU_STORE || active_menu == MENU_CLEAR )&& blink_counter % 40 == 0)
+			{
+				for(int i=0; i < STORE_COUNT; i++)
+					set_store_led(i);
+			}
+		
+		
+
+		
+
+			rotary_process();
+			loop=0;
 		}
-
-		if((active_menu == MENU_STORE || active_menu == MENU_CLEAR )&& blink_counter % 40 == 0)
-		{
-			for(int i=0; i < STORE_COUNT; i++)
-				set_store_led(i);
-		}
-
-
+		
+		rotary_tick();
 		//awkward delay here.. should be replaced by a timer. But it works, DMX is interrupt-driven
-		_delay_ms(5);
+		_delay_ms(0.5);
 	}
 }
 
@@ -451,6 +483,16 @@ void process_inputs(void)
 	//Fetch keypress from hardware
 	camkey_t keys = get_camkeys();
 
+	static rotary_config_t rotary_speed_config = 
+		{
+			.data_u8 = &cams[0].speed,
+			.type = rotary_uint8,
+			.min = 0,
+			.max = 255,
+			.change = main_show,
+			.multi = 6
+		};
+
 	//Change the active cam
 	switch(keys)
 	{
@@ -468,6 +510,8 @@ void process_inputs(void)
 		set_cam_leds(active_cam);
 
 		update_leds();
+		rotary_speed_config.data_u8 = &cams[active_cam].speed;
+		rotary_setconfig(&rotary_speed_config);
 
 		//main screen
 		if(active_menu == MENU_MAIN)
@@ -480,7 +524,7 @@ void process_inputs(void)
 	
 	
 	uint8_t old_tilt = cams[active_cam].tilt;
-uint8_t old_pan = cams[active_cam].pan;
+	uint8_t old_pan = cams[active_cam].pan;
 	
 	analog++;
 	if(analog%8==0)
@@ -560,16 +604,27 @@ uint8_t old_pan = cams[active_cam].pan;
 	}
 
 	//if tilt or pan changed
+	
+	//write values to DMX
+	write_dmx(cams[active_cam].base_addr + cams[active_cam].pan_address, cams[active_cam].pan);
+	write_dmx(cams[active_cam].base_addr + cams[active_cam].tilt_address, cams[active_cam].tilt);
+	write_dmx(cams[active_cam].base_addr + cams[active_cam].speed_address, cams[active_cam].speed);
+
+	//update main menu
 	if(old_tilt != cams[active_cam].tilt || old_pan != cams[active_cam].pan)
 	{
-		//write values to DMX
-		write_dmx(cams[active_cam].base_addr + cams[active_cam].pan_address, cams[active_cam].pan);
-		write_dmx(cams[active_cam].base_addr + cams[active_cam].tilt_address, cams[active_cam].tilt);
-
-		//update main menu
 		if(active_menu == MENU_MAIN)
 			main_show();
-	}	
+	}
+
+	rotselkey_t rotsel = get_rotselkey();
+
+	if(rotsel != ROTSEL_NO_KEY)
+	{
+
+
+		
+	}
 
 }
 
@@ -584,15 +639,19 @@ void store_clear(void)
 
 void main_show(void)
 {
-	lcd_gotoxy(0,1);
+	lcd_gotoxy(0,0);
 	lcd_puts("Active: CAM ");
 	char tmp[21];
 	itoa(active_cam+1,tmp,10);
-	lcd_gotoxy(12,1);
+	lcd_gotoxy(12,0);
+	lcd_puts(tmp);
+
+	lcd_gotoxy(0,1);
+	sprintf(tmp,"Pan: %3d Tilt: %3d", cams[active_cam].pan, cams[active_cam].tilt);
 	lcd_puts(tmp);
 
 	lcd_gotoxy(0,2);
-	sprintf(tmp,"Pan: %3d Tilt: %3d", cams[active_cam].pan, cams[active_cam].tilt);
+	sprintf(tmp,"Speed: %3d", cams[active_cam].speed);
 	lcd_puts(tmp);
 }	
 
@@ -996,14 +1055,4 @@ void setup_reset(void)
 	current_menu=0;
 	setup_menu_show();
 }
-
-
-
-
-
-
-
-
-
-
 
