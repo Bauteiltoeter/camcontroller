@@ -3,6 +3,7 @@
 
 	#include <stdint.h>
 #include <stdlib.h>
+#include <avr/pgmspace.h>
 
 	typedef enum {
 		MENU_SPLASH =0,

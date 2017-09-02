@@ -585,13 +585,13 @@ void set_menu(menu_identifiers menu)
 {
 	active_menu = menu;
 	lcd_clrscr();
-	lcd_puts(menues[menu].lines[0]);
+	lcd_puts_p(menues[menu].lines[0]);
 	lcd_gotoxy(0,1);
-	lcd_puts(menues[menu].lines[1]);
+	lcd_puts_p(menues[menu].lines[1]);
 	lcd_gotoxy(0,2);
-	lcd_puts(menues[menu].lines[2]);
+	lcd_puts_p(menues[menu].lines[2]);
 	lcd_gotoxy(0,3);
-	lcd_puts(menues[menu].lines[3]);
+	lcd_puts_p(menues[menu].lines[3]);
 
 	if(menues[menu].init)
 		menues[menu].init();
