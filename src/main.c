@@ -12,39 +12,11 @@
 #include "adc.h"
 #include "hardware.h"
 #include "rotary.h"
+#include "menu_structures.h"
 
 
-typedef enum {
-	MENU_SPLASH =0,
-	MENU_MAIN = 1,
-	MENU_SETUP = 2,
-	MENU_EDIT_CAM = 3,
-	MENU_STORE = 4,
-	MENU_CLEAR = 5,
-	MENU_GENERAL_SETUP = 6,
-	MENU_RESET = 7,
-	MENU_CTRL = 8,
-	MENU_CTRL_EDIT = 9,
-	MENU_LOCKED = 10,
-	MENU_LOCK_SETUP = 11,
-	MENU_INVALID = 255
-} menu_identifiers;
 
-typedef void(*menu_button)(void);
-typedef void(*init_function)(void);
 
-// This struct defines a menu page
-// Each page contains the 4 LCD lines, the ID of the reachable menues, callbacks for each buttons and an init-function called when opening the menu
-//
-typedef struct
-{
-	const char* lines[4];				//Display content
-	menu_identifiers next[4];	//Menu to reach if a softkey is pressed
-	menu_button cb[4];			//Callback for buttonpresses
-	menu_button cb_r[4];
-	init_function init;			//Init function
-	
-} menu_t;
 
 
 #define CAM_COUNT 4
@@ -198,7 +170,7 @@ void lock_pressed(uint8_t n);
 menu_identifiers active_menu;
 
 
-cam_data_t cams_default[CAM_COUNT] = 
+const cam_data_t cams_default[CAM_COUNT] PROGMEM = 
 {
 	{
 		.base_addr = 0,
@@ -272,94 +244,6 @@ uint8_t active_cam; //remember the active cam
 uint8_t code[] = {1,1,1,1};
 uint8_t code_eeprom[4] EEMEM;
 
-//Define the menu structure
-menu_t menues[] =
-{ 	
-	{ //MENU_SPLASH
-		.lines = { "DragonVideo        ","By Karrn            ","Cam controller      ","                2017"},
-		.next =  { MENU_MAIN,MENU_MAIN,MENU_MAIN,MENU_MAIN},
-		.cb =    { NULL,NULL,NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init =  NULL
-    },
-	{ //MENU_MAIN
-		.lines = { "                   ","                    ","                    ","STORE          SETUP"},
-		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP},
-		.cb    = { NULL,NULL,NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = main_show
-	},
-	{ //MENU_SETUP
-		.lines = { "Setup              ","                    ","                    ","PREV NEXT EDIT  BACK"},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_EDIT_CAM,MENU_GENERAL_SETUP},
-		.cb    = { setup_cam_down,setup_cam_up,param_resetId,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init =  setup_show_cam
-	},
-	{ //MENU_EDIT_CAM
-		.lines = { "Setup              ","                    ","                    ","NEXT UP   DOWN  BACK"},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_SETUP},
-		.cb    = { param_next,param_up, param_down, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = param_show
-	},
-	{ //MENU_STORE
-		.lines = { "Store              ","Choose store to save","                    ","     CLEAR     ABORT"},
-		.next  = { MENU_INVALID,MENU_CLEAR,MENU_INVALID,MENU_MAIN},
-		.cb    = { NULL,NULL, NULL, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = NULL
-	},
-	{ //MENU_CLEAR
-		.lines = { "Clear store        ","Choose store        ","                    ","ALL            ABORT"},
-		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN},
-		.cb    = { store_clear,NULL, NULL, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = NULL
-	}, 
-	{ //MENU_GENERAL_SETUP
-		.lines = { "Choose setup menu  ","                    ","                    ","PREV NEXT ENTER BACK"},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN},
-		.cb    = { setup_menu_prev,setup_menu_next, setup_menu_enter, save_data},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = setup_reset
-	}, 
-	{ //MENU_RESET
-		.lines = { "Setup              ","Load default config ","and erase all data? ","YES             BACK"},
-		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN},
-		.cb    = { load_default,NULL, NULL, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = NULL
-	},  
-	{ //MENU_CTRL
-		.lines = { "Setup              ","                    ","                    ","PREV NEXT CTRL  BACK"},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_GENERAL_SETUP},
-		.cb    = { ctrl_cam_down,ctrl_cam_up, NULL, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = ctrl_cam_show
-	},  
-	{ //MENU_CTRL_EDIT
-		.lines = { "Setup              ","                    ","  Power             "," ON  OFF   BTN  BACK"},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_CTRL},
-		.cb    = { cam_power_on,cam_power_off, cam_button, NULL},
-		.cb_r=   { NULL,NULL,cam_button,NULL},
-		.init  = cam_power_show
-	} ,  
-	{ //MENU_LOCKED
-		.lines = { "    DragonVideo    ","  **** LOCKED ****  ","                    "," 1    2     3     4 "},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
-		.cb    = { lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = NULL
-	} ,  
-	{ //MENU_LOCK_SETUP
-		.lines = { "Setup              ","Enter new code:     ","                    "," 1    2     3     4 "},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
-		.cb    = {lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed},
-		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = NULL
-	}
-};
 
 typedef struct {
 	menu_identifiers menu;
@@ -831,7 +715,8 @@ void save_data(void)
 
 void load_default(void)
 {
-	memcpy(cams,cams_default, sizeof(cams)); 
+
+	memcpy_P(cams,cams_default, sizeof(cams)); 
 	save_data();
 }
 
