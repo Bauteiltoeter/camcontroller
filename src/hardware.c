@@ -121,7 +121,11 @@ softkey_t get_softkeys(void)
 	}
 	else
 	{
-		old_k1=0;
+		if(old_k1==1)
+		{
+			old_k1=0;	
+			return SK1_R;
+		}
 	}
 
 	if( (SOFTKEY_PIN & (1<<SOFTKEY_2)))
@@ -134,7 +138,11 @@ softkey_t get_softkeys(void)
 	}
 	else
 	{
-		old_k2=0;
+		if(old_k2==1)
+		{
+			old_k2=0;
+			return SK2_R;
+		}
 	}
 
 
@@ -148,11 +156,15 @@ softkey_t get_softkeys(void)
 	}
 	else
 	{
-		old_k3=0;
+		if(old_k3==1)
+		{
+			old_k3=0;
+			return SK3_R;
+		}
 	}
 
 
-if( (SOFTKEY_PIN & (1<<SOFTKEY_4)))
+	if( (SOFTKEY_PIN & (1<<SOFTKEY_4)))
 	{
 		if(old_k4==0)
 		{
@@ -162,10 +174,12 @@ if( (SOFTKEY_PIN & (1<<SOFTKEY_4)))
 	}
 	else
 	{
-		old_k4=0;
+		if(old_k4==1)
+		{
+			old_k4=0;
+			return SK4_R;
+		}
 	}
-
-
 
 	return NO_KEY;
 }
