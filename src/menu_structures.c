@@ -89,7 +89,7 @@ static const char MENU_LOCK_SETUP_L3[] PROGMEM		= "                    ";
 static const char MENU_LOCK_SETUP_L4[] PROGMEM		= " 1    2     3     4 ";
 
 //Define the menu structure
-menu_t menues[] =
+__flash const menu_t menues[] =
 { 	
 	{ //MENU_SPLASH
 		.lines = { MENU_SPLASH_L1,MENU_SPLASH_L2,MENU_SPLASH_L3,MENU_SPLASH_L4},
@@ -176,3 +176,5 @@ menu_t menues[] =
 		.init  = NULL
 	}
 };
+
+

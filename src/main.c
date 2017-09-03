@@ -3,7 +3,7 @@
 #include <avr/eeprom.h>
 #include <stdio.h>
 #include <util/delay.h>
-	#include <stdlib.h>
+#include <stdlib.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -13,10 +13,6 @@
 #include "hardware.h"
 #include "rotary.h"
 #include "menu_structures.h"
-
-
-
-
 
 
 #define CAM_COUNT 4
@@ -36,7 +32,6 @@ typedef struct  {
 	uint8_t speed;
 	uint8_t button_state;
 	uint8_t power_state;
-	
 
 	uint16_t store_pan[STORE_COUNT];	//Stored positions
 	uint16_t store_tilt[STORE_COUNT];
@@ -57,7 +52,7 @@ typedef struct {
 
 
 #define NUMBER_OF_CAM_PARAMETERS  (sizeof(cam_setup_parameters)/sizeof(cam_setup_parameters_t))
-cam_setup_parameters_t cam_setup_parameters[] = 
+const __flash cam_setup_parameters_t cam_setup_parameters[] = 
 {
 	{
 		.name = "base_addr           ",

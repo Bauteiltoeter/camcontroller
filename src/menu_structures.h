@@ -38,6 +38,6 @@
 	
 	} menu_t;
 
-	extern menu_t menues[];
+	extern __flash const menu_t menues[];
 
 #endif
