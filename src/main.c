@@ -382,7 +382,8 @@ void process_inputs(void)
 			.min = 0,
 			.max = 255,
 			.change = main_show,
-			.multi = 6
+			.multi = 5,
+			.wrap = 0
 		};
 
 	//Change the active cam
@@ -636,6 +637,9 @@ void param_next(void)
 	if(param_id>=NUMBER_OF_CAM_PARAMETERS)
 		param_id=0;
 
+
+	
+
 	param_show();
 }
 
@@ -673,6 +677,34 @@ void param_down(void)
 
 void param_show(void)
 {
+	static rotary_config_t rotary_param_conf = 
+		{
+			.data_u8 = NULL,
+			.type = rotary_uint8,
+			.min = 0,
+			.max = 255,
+			.change = param_show,
+			.multi = 1,
+			.wrap = 1
+		};
+
+	if(cam_setup_parameters[param_id].type == type_uint16)
+	{
+		rotary_param_conf.data_u16 = ((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset;
+		rotary_param_conf.type = rotary_uint16;
+	}	
+	else if(cam_setup_parameters[param_id].type == type_uint8)
+	{
+		rotary_param_conf.data_u8 = ((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset;
+		rotary_param_conf.type = rotary_uint8;
+	}
+
+	rotary_param_conf.min = cam_setup_parameters[param_id].min;
+	rotary_param_conf.max = cam_setup_parameters[param_id].max;
+
+	rotary_setconfig(&rotary_param_conf);
+
+
 	lcd_gotoxy(14,0);
 	lcd_puts("CAM ");
 	char tmp[10];

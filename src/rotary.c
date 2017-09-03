@@ -58,6 +58,7 @@ void rotary_setconfig(rotary_config_t* config)
 void rotary_process(void)
 {
 	int8_t diff = encode_read();
+	int32_t tmp;
 
 	if(diff!=0 && current_config!=NULL)
 	{
@@ -65,26 +66,32 @@ void rotary_process(void)
 
 		switch(current_config->type)
 		{
-			case rotary_uint8: *(current_config->data_u8)+=diff; 
-								if( diff>0  && ( *(current_config->data_u8) > current_config->max  || *(current_config->data_u8) < current_config->min) )
+			case rotary_uint8: tmp = *(current_config->data_u8)+(int16_t)diff; 
+
+								if( diff>0  && tmp > current_config->max )
 								{
-									*(current_config->data_u8)=current_config->min;
+									tmp = current_config->max;
 								}
-								else if( diff < 0 && ( *(current_config->data_u8) > current_config->max  || *(current_config->data_u8) < current_config->min) )
+								else if( diff < 0 &&  tmp < (int16_t)current_config->min )
 								{
-									*(current_config->data_u8)=current_config->max;
+									tmp = current_config->min;
 								}
 
+								*(current_config->data_u8)=tmp;
+
 			break;
-			case rotary_uint16: *(current_config->data_u16)+=diff; 
-								if( diff>0  && ( *(current_config->data_u16) > current_config->max  || *(current_config->data_u16) < current_config->min) )
+			case rotary_uint16: tmp = *(current_config->data_u16)+(int32_t)diff; 
+
+								if( diff>0  && tmp > current_config->max )
 								{
-									*(current_config->data_u16)=current_config->min;
+									tmp = current_config->max;
 								}
-								else if( diff < 0 && ( *(current_config->data_u16) > current_config->max  || *(current_config->data_u16) < current_config->min) )
+								else if( diff < 0 &&  tmp < (int32_t)current_config->min )
 								{
-									*(current_config->data_u16)=current_config->max;
+									tmp = current_config->min;
 								}
+
+								*(current_config->data_u16)=tmp;
 
 			break;
 		}		
