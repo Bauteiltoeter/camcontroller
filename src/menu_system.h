@@ -39,5 +39,8 @@
 	} menu_t;
 
 	extern __flash const menu_t menues[];
+	extern menu_identifiers active_menu;
 
+	void set_menu(menu_identifiers menu);
+	void process_menu(void);
 #endif

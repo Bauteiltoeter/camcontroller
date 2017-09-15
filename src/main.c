@@ -12,30 +12,11 @@
 #include "adc.h"
 #include "hardware.h"
 #include "rotary.h"
-#include "menu_structures.h"
+#include "menu_system.h"
+#include "menu_main.h"
+#include "menu_lock.h"
+#include "globals.h"
 
-
-#define CAM_COUNT 4
-#define STORE_COUNT 4
-typedef struct  {
-	uint16_t base_addr;		//DMX base address
-	uint16_t pan_address;	//Offset of pan address from base
-	uint16_t tilt_address;	//Offset of tilt address from base
-	uint16_t speed_address;
-	uint16_t switch_address;
-	uint8_t pan_invert;	//Invert pan? (0/1)
-	uint8_t tilt_invert;	//Invert tilt? (0/1)
-	uint16_t pan_scaling;  
-	uint16_t tilt_scaling;
-	uint8_t pan;			//Pan value (send over DMX)
-	uint8_t tilt;			//Tilt value (send over DMX)
-	uint8_t speed;
-	uint8_t button_state;
-	uint8_t power_state;
-
-	uint16_t store_pan[STORE_COUNT];	//Stored positions
-	uint16_t store_tilt[STORE_COUNT];
-} cam_data_t;
 
 typedef enum {
 	type_uint16,
@@ -127,11 +108,10 @@ void param_up(void);
 void param_down(void);
 void param_show(void);
 void param_resetId(void);
-void main_show(void);
+
 void store_clear(void);
 void save_data(void);
-void set_menu(menu_identifiers menu);
-void process_menu(void);
+
 void process_inputs(void);
 void update_leds(void);
 void load_default(void);
@@ -153,16 +133,11 @@ void setup_menu_enter(void);
 void setup_menu_show(void);
 void setup_reset(void);
 
-void lock_1_pressed(void);
-void lock_2_pressed(void);
-void lock_3_pressed(void);
-void lock_4_pressed(void);
-void lock_pressed(uint8_t n);
 
 //###########################
 //  Global variables
 //###########################
-menu_identifiers active_menu;
+
 
 
 const cam_data_t cams_default[CAM_COUNT] PROGMEM = 
@@ -232,12 +207,10 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
 	} 
 };
-cam_data_t cams[CAM_COUNT];	//Data for each cam
-cam_data_t backup_cams[CAM_COUNT] EEMEM; //store CAM Data in eeprom
-uint8_t active_cam; //remember the active cam
 
-uint8_t code[] = {1,1,1,1};
-uint8_t code_eeprom[4] EEMEM;
+cam_data_t backup_cams[CAM_COUNT] EEMEM; //store CAM Data in eeprom
+
+
 
 
 typedef struct {
@@ -278,7 +251,7 @@ int main (void)
 	//initialise stuff
 	hardware_init();
 	eeprom_read_block (cams, backup_cams, sizeof(cams));
-	eeprom_read_block (code, code_eeprom, sizeof(code));
+	lock_load();
 
 	lcd_init(LCD_DISP_ON);
 	set_menu(MENU_SPLASH);
@@ -375,16 +348,7 @@ void process_inputs(void)
 	//Fetch keypress from hardware
 	camkey_t keys = get_camkeys();
 
-	static rotary_config_t rotary_speed_config = 
-		{
-			.data_u8 = &cams[0].speed,
-			.type = rotary_uint8,
-			.min = 0,
-			.max = 255,
-			.change = main_show,
-			.multi = 5,
-			.wrap = 0
-		};
+
 
 	//Change the active cam
 	switch(keys)
@@ -403,12 +367,11 @@ void process_inputs(void)
 		set_cam_leds(active_cam);
 
 		update_leds();
-		rotary_speed_config.data_u8 = &cams[active_cam].speed;
-		rotary_setconfig(&rotary_speed_config);
+		
 
 		//main screen
 		if(active_menu == MENU_MAIN)
-			main_show();
+			main_init();
 
 	}
 
@@ -530,71 +493,9 @@ void store_clear(void)
 	}
 }
 
-void main_show(void)
-{
-	lcd_gotoxy(0,0);
-	lcd_puts("Active: CAM ");
-	char tmp[21];
-	itoa(active_cam+1,tmp,10);
-	lcd_gotoxy(12,0);
-	lcd_puts(tmp);
 
-	lcd_gotoxy(0,1);
-	sprintf(tmp,"Pan: %3d Tilt: %3d", cams[active_cam].pan, cams[active_cam].tilt);
-	lcd_puts(tmp);
 
-	lcd_gotoxy(0,2);
-	sprintf(tmp,"Speed: %3d", cams[active_cam].speed);
-	lcd_puts(tmp);
-}	
 
-void process_menu(void)
-{
-	softkey_t button = get_softkeys();
-
-	if(button != NO_KEY )
-	{
-
-		switch(button)
-		{
-			case SK1: 
-			case SK2: 
-			case SK3:
-			case SK4: 
-				if(menues[active_menu].cb[button] != NULL)
-						menues[active_menu].cb[button]();	
-
-				if(menues[active_menu].next[button] != MENU_INVALID)
-					set_menu(menues[active_menu].next[button]);
-			break;
-			default:
-				if(menues[active_menu].cb_r[button-4] != NULL)
-						menues[active_menu].cb_r[button-4]();	
-
-			break;
-					
-		}
-	}	
-}
-
-void set_menu(menu_identifiers menu)
-{
-	active_menu = menu;
-	lcd_clrscr();
-	lcd_puts_p(menues[menu].lines[0]);
-	lcd_gotoxy(0,1);
-	lcd_puts_p(menues[menu].lines[1]);
-	lcd_gotoxy(0,2);
-	lcd_puts_p(menues[menu].lines[2]);
-	lcd_gotoxy(0,3);
-	lcd_puts_p(menues[menu].lines[3]);
-
-	if(menues[menu].init)
-		menues[menu].init();
-
-	update_leds();
-
-}
 
 uint8_t setup_active_cam=0;
 uint8_t param_id=0;
@@ -737,7 +638,7 @@ void param_resetId(void)
 void save_data(void)
 {
 	eeprom_write_block (cams, backup_cams, sizeof(cams));
-	eeprom_write_block (code, code_eeprom, sizeof(code));
+	lock_save();
 }
 
 void load_default(void)
@@ -915,76 +816,6 @@ void setup_menu_show(void)
 {
 	lcd_gotoxy(0,1);
 	lcd_puts(setting_menues[current_menu].description);
-}
-
-void lock_1_pressed(void)
-{
-	lock_pressed(1);
-}
-
-void lock_2_pressed(void)
-{
-	lock_pressed(2);
-}
-
-void lock_3_pressed(void)
-{
-	lock_pressed(3);
-}
-
-void lock_4_pressed(void)
-{
-	lock_pressed(4);
-}
-
-void lock_pressed(uint8_t n)
-{
-	static uint8_t index=0;
-	static uint8_t numbers[4];
-
-	lcd_gotoxy(8+index,2);
-
-	if(active_menu == MENU_LOCK_SETUP)
-		lcd_putc('0'+n);
-	else
-		lcd_putc('*');
-
-	numbers[index]=n;
-	index++;
-	
-	if(index==4)
-	{
-		index=0;
-	
-		if(active_menu == MENU_LOCK_SETUP)
-		{
-			for(uint8_t i=0; i < 4; i++)
-			{
-				code[i]=numbers[i];
-				set_menu(MENU_GENERAL_SETUP);
-			}
-		}
-		else
-		{
-			uint8_t error=0;
-			for(uint8_t i=0; i < 4; i++)
-			{
-				if(code[i]!=numbers[i])
-					error=1;
-
-			}
-
-			if(error==0)
-			{
-				set_menu(MENU_MAIN);
-			}
-			else
-			{
-				lcd_gotoxy(8,2);
-				lcd_puts("    ");
-			}
-		}
-	}
 }
 
 void setup_reset(void)

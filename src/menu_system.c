@@ -1,6 +1,9 @@
-#include "menu_structures.h"
+#include "menu_system.h"
+#include "menu_main.h"
+#include "menu_lock.h"
+#include "lcd.h"
+#include "hardware.h"
 
-void main_show(void);
 void setup_show_cam(void);
 void setup_cam_down(void);
 void setup_cam_up(void);
@@ -23,10 +26,7 @@ void ctrl_cam_up(void);
 void cam_power_on(void);
 void cam_power_off(void);
 void cam_button(void);
-void lock_1_pressed(void);
-void lock_2_pressed(void);
-void lock_3_pressed(void);
-void lock_4_pressed(void);
+
 
 static const char MENU_SPLASH_L1[] PROGMEM			= "DragonVideo         ";
 static const char MENU_SPLASH_L2[] PROGMEM			= "By Karrn            ";
@@ -103,7 +103,7 @@ __flash const menu_t menues[] =
 		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP},
 		.cb    = { NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL},
-		.init  = main_show
+		.init  = main_init
 	},
 	{ //MENU_SETUP
 		.lines = { MENU_SETUP_L1,MENU_SETUP_L2,MENU_SETUP_L3,MENU_SETUP_L4},
@@ -176,5 +176,58 @@ __flash const menu_t menues[] =
 		.init  = NULL
 	}
 };
+
+menu_identifiers active_menu;
+
+void process_menu(void)
+{
+	softkey_t button = get_softkeys();
+
+	if(button != NO_KEY )
+	{
+
+		switch(button)
+		{
+			case SK1: 
+			case SK2: 
+			case SK3:
+			case SK4: 
+				if(menues[active_menu].cb[button] != NULL)
+						menues[active_menu].cb[button]();	
+
+				if(menues[active_menu].next[button] != MENU_INVALID)
+					set_menu(menues[active_menu].next[button]);
+			break;
+			default:
+				if(menues[active_menu].cb_r[button-4] != NULL)
+						menues[active_menu].cb_r[button-4]();	
+
+			break;
+					
+		}
+	}	
+}
+
+void set_menu(menu_identifiers menu)
+{
+	active_menu = menu;
+	lcd_clrscr();
+	lcd_puts_p(menues[menu].lines[0]);
+	lcd_gotoxy(0,1);
+	lcd_puts_p(menues[menu].lines[1]);
+	lcd_gotoxy(0,2);
+	lcd_puts_p(menues[menu].lines[2]);
+	lcd_gotoxy(0,3);
+	lcd_puts_p(menues[menu].lines[3]);
+
+	if(menues[menu].init)
+		menues[menu].init();
+
+	update_leds();
+
+}
+
+
+
 
 
