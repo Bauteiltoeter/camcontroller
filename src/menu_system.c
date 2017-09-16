@@ -3,32 +3,14 @@
 #include "menu_lock.h"
 #include "menu_settings_general.h"
 #include "menu_cam_config.h"
+#include "menu_cam_ctrl.h"
 #include "lcd.h"
 #include "hardware.h"
 
-void setup_show_cam(void);
-void setup_cam_down(void);
-void setup_cam_up(void);
-void setup_menu_prev(void);
-void setup_menu_next(void);
-void setup_menu_enter(void);
-void save_data(void);
-void param_resetId(void);
-void param_show(void);
-void param_next(void);
-void param_up(void);
-void param_up(void);
-void store_clear(void);
-void setup_reset(void);
-void load_default(void);
-void ctrl_cam_show(void);
-void cam_power_show(void);
-void ctrl_cam_down(void);
-void ctrl_cam_up(void);
-void cam_power_on(void);
-void cam_power_off(void);
-void cam_button(void);
 
+void store_clear(void);
+void save_data(void);
+void load_default(void);
 
 static const char MENU_SPLASH_L1[] PROGMEM			= "DragonVideo         ";
 static const char MENU_SPLASH_L2[] PROGMEM			= "By Karrn            ";
@@ -40,12 +22,12 @@ static const char MENU_MAIN_L2[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L3[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L4[] PROGMEM			= "STORE          SETUP";
 
-static const char MENU_SETUP_L1[] PROGMEM			= "Setup               ";
+static const char MENU_SETUP_L1[] PROGMEM			= "Select cam          ";
 static const char MENU_SETUP_L2[] PROGMEM			= "                    ";
 static const char MENU_SETUP_L3[] PROGMEM			= "                    ";
-static const char MENU_SETUP_L4[] PROGMEM			= "PREV NEXT EDIT  BACK";
+static const char MENU_SETUP_L4[] PROGMEM			= "PREV NEXT ENTER BACK";
 
-static const char MENU_EDIT_CAM_L1[] PROGMEM		= "Setup               ";
+static const char MENU_EDIT_CAM_L1[] PROGMEM		= "Enter parameter     ";
 static const char MENU_EDIT_CAM_L2[] PROGMEM		= "                    ";
 static const char MENU_EDIT_CAM_L3[] PROGMEM		= "                    ";
 static const char MENU_EDIT_CAM_L4[] PROGMEM		= "NEXT UP   DOWN  BACK";
@@ -187,17 +169,19 @@ void process_menu(void)
 
 	if(button != NO_KEY )
 	{
-
+		menu_identifiers old;
 		switch(button)
 		{
 			case SK1: 
 			case SK2: 
 			case SK3:
 			case SK4: 
+				old = active_menu;
+
 				if(menues[active_menu].cb[button] != NULL)
 						menues[active_menu].cb[button]();	
 
-				if(menues[active_menu].next[button] != MENU_INVALID)
+				if(active_menu == old && menues[active_menu].next[button] != MENU_INVALID)
 					set_menu(menues[active_menu].next[button]);
 			break;
 			default:

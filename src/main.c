@@ -26,16 +26,7 @@ void process_inputs(void);
 void update_leds(void);
 void load_default(void);
 
-void ctrl_cam_up(void);
-void ctrl_cam_down(void);
-void ctrl_cam_show(void);
 
-void cam_power_on(void);
-void cam_power_off(void);
-void cam_button(void);
-void cam_power_show(void);
-
-void send_switch(void);
 
 
 
@@ -115,13 +106,6 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 
 cam_data_t backup_cams[CAM_COUNT] EEMEM; //store CAM Data in eeprom
 
-
-
-
-
-
-
-
 //Hauptprogramm
 int main (void) 
 {  
@@ -182,10 +166,7 @@ int main (void)
 				for(int i=0; i < STORE_COUNT; i++)
 					set_store_led(i);
 			}
-		
-		
-
-		
+	
 
 			rotary_process();
 			loop=0;
@@ -215,9 +196,7 @@ void update_leds(void)
 			}
 		}
 	}
-
 }
-
 
 
 void process_inputs(void)
@@ -253,8 +232,6 @@ void process_inputs(void)
 	}
 
 	static uint8_t analog=0;
-
-	
 	
 	uint8_t old_tilt = cams[active_cam].tilt;
 	uint8_t old_pan = cams[active_cam].pan;
@@ -358,7 +335,6 @@ void process_inputs(void)
 
 		
 	}
-
 }
 
 void store_clear(void)
@@ -369,14 +345,6 @@ void store_clear(void)
 		cams[active_cam].store_tilt[i] = 0xFFFF;
 	}
 }
-
-
-
-
-
-
-
-
 
 void save_data(void)
 {
@@ -390,141 +358,4 @@ void load_default(void)
 	memcpy_P(cams,cams_default, sizeof(cams)); 
 	save_data();
 }
-
-uint8_t ctrl_selected_cam=0;
-
-
-void ctrl_cam_up(void)
-{
-	ctrl_selected_cam++;
-
-	if(ctrl_selected_cam>=CAM_COUNT)
-	{
-		ctrl_selected_cam=0;
-	}
-
-	ctrl_cam_show();
-
-}
-
-void ctrl_cam_down(void)
-{
-	ctrl_selected_cam--;
-
-	if(ctrl_selected_cam>=CAM_COUNT)
-	{
-		ctrl_selected_cam=CAM_COUNT-1;
-	}
-
-	ctrl_cam_show();
-}
-
-void ctrl_cam_show(void)
-{
-	lcd_gotoxy(0,1);
-	lcd_puts("Controll CAM ");
-	
-	lcd_gotoxy(13,1);
-	char str[10];
-	itoa(ctrl_selected_cam+1, str, 10);
-	lcd_puts(str);
-}
-
-void cam_power_on(void)
-{
-	cams[ctrl_selected_cam].power_state=1;
-	cam_power_show();
-}
-
-void cam_power_off(void)
-{
-	cams[ctrl_selected_cam].power_state=0;
-	cam_power_show();
-}
-
-void cam_button(void)
-{
-	if(cams[ctrl_selected_cam].button_state)
-	{
-		cams[ctrl_selected_cam].button_state=0;
-	}
-	else
-	{
-	
-		cams[ctrl_selected_cam].button_state=1;
-	}
-
-	cam_power_show();
-}
-
-void cam_power_show(void)
-{
-	if(cams[ctrl_selected_cam].power_state)
-	{
-		lcd_gotoxy(0,3);
-		lcd_putc('>');
-		lcd_gotoxy(3,3);
-		lcd_putc('<');
-		lcd_putc(' ');
-		lcd_gotoxy(8,3);
-		lcd_putc(' ');
-	}
-	else
-	{
-		lcd_gotoxy(0,3);
-		lcd_putc(' ');
-		lcd_gotoxy(3,3);
-		lcd_putc(' ');
-		lcd_putc('>');
-		lcd_gotoxy(8,3);
-		lcd_putc('<');
-	}
-
-	if(cams[ctrl_selected_cam].button_state)
-	{
-		cams[ctrl_selected_cam].button_state=1;
-		lcd_gotoxy(10,3);
-		lcd_putc('>');
-		lcd_gotoxy(14,3);
-		lcd_putc('<');
-
-	}
-	else
-	{
-		lcd_gotoxy(10,3);
-		lcd_putc(' ');
-		lcd_gotoxy(14,3);
-		lcd_putc(' ');
-
-	}
-
-	send_switch();
-}
-
-void send_switch(void)
-{
-	uint8_t dmx;
-
-	if(!cams[ctrl_selected_cam].button_state && !cams[ctrl_selected_cam].power_state)
-		dmx=0;
-	else if(!cams[ctrl_selected_cam].button_state && cams[ctrl_selected_cam].power_state)
-		dmx=64;
-	else if(cams[ctrl_selected_cam].button_state && !cams[ctrl_selected_cam].power_state)
-		dmx=128;
-	else if(cams[ctrl_selected_cam].button_state && cams[ctrl_selected_cam].power_state)
-		dmx=255;
-
-//	lcd_gotoxy(0,0);
-	char rofl[20];
-
-	itoa(dmx, rofl, 10);
-//	lcd_puts(rofl);
-//	lcd_puts("     ");
-
-	write_dmx(cams[ctrl_selected_cam].base_addr + cams[ctrl_selected_cam].switch_address, dmx);
-}
-
-
-
-
 

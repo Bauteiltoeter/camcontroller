@@ -1,6 +1,5 @@
 #include "menu_settings_general.h"
 #include "menu_system.h"
-
 uint8_t current_menu=0;
 
 typedef struct {
