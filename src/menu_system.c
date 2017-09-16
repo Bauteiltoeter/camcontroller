@@ -1,6 +1,8 @@
 #include "menu_system.h"
 #include "menu_main.h"
 #include "menu_lock.h"
+#include "menu_settings_general.h"
+#include "menu_cam_config.h"
 #include "lcd.h"
 #include "hardware.h"
 
