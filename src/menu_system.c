@@ -141,8 +141,8 @@ __flash const menu_t menues[] =
 	{ //MENU_CTRL_EDIT
 		.lines = { MENU_CTRL_EDIT_L1,MENU_CTRL_EDIT_L2,MENU_CTRL_EDIT_L3,MENU_CTRL_EDIT_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_CTRL},
-		.cb    = { cam_power_on,cam_power_off, cam_button, NULL},
-		.cb_r=   { NULL,NULL,cam_button,NULL},
+		.cb    = { cam_power_on,cam_power_off, cam_button_press, NULL},
+		.cb_r=   { NULL,NULL,cam_button_release,NULL},
 		.init  = cam_power_show
 	} ,  
 	{ //MENU_LOCKED

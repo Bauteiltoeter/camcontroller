@@ -7,7 +7,8 @@ void ctrl_cam_show(void);
 
 void cam_power_on(void);
 void cam_power_off(void);
-void cam_button(void);
+void cam_button_press(void);
+void cam_button_release(void);
 void cam_power_show(void);
 
 void send_switch(void);

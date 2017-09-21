@@ -52,7 +52,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.tilt = 0,
 		.speed = 0,
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
-		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.button_state = 0,
+		.power_state = 1
 	},	
 	{
 		.base_addr = 16,
@@ -68,7 +70,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.tilt = 0,
 		.speed = 0,
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
-		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.button_state = 0,
+		.power_state = 1 
 	},
 	{
 		.base_addr = 32,
@@ -84,7 +88,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.tilt = 0,
 		.speed = 0,
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
-		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.button_state = 0,
+		.power_state = 1 
 	},
 	{
 		.base_addr = 0xFFFF,
@@ -100,7 +106,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.tilt = 0xFFFF,
 		.speed = 0xFFFF,
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
-		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF} 
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.button_state = 0,
+		.power_state = 1 
 	} 
 };
 

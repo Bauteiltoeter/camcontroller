@@ -53,18 +53,15 @@ void cam_power_off(void)
 	cam_power_show();
 }
 
-void cam_button(void)
+void cam_button_press(void)
 {
-	if(cams[ctrl_selected_cam].button_state)
-	{
-		cams[ctrl_selected_cam].button_state=0;
-	}
-	else
-	{
-	
-		cams[ctrl_selected_cam].button_state=1;
-	}
+	cams[ctrl_selected_cam].button_state=1;
+	cam_power_show();
+}
 
+void cam_button_release(void)
+{
+	cams[ctrl_selected_cam].button_state=0;
 	cam_power_show();
 }
 
