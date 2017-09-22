@@ -31,9 +31,9 @@
 	typedef struct
 	{
 		const char* lines[4];				//Display content
-		menu_identifiers next[4];	//Menu to reach if a softkey is pressed
-		menu_button cb[4];			//Callback for buttonpresses
-		menu_button cb_r[4];
+		menu_identifiers next[5];	//Menu to reach if a softkey is pressed
+		menu_button cb[5];			//Callback for buttonpresses
+		menu_button cb_r[5];
 		init_function init;			//Init function
 	
 	} menu_t;

@@ -77,86 +77,86 @@ __flash const menu_t menues[] =
 { 	
 	{ //MENU_SPLASH
 		.lines = { MENU_SPLASH_L1,MENU_SPLASH_L2,MENU_SPLASH_L3,MENU_SPLASH_L4},
-		.next =  { MENU_MAIN,MENU_MAIN,MENU_MAIN,MENU_MAIN},
-		.cb =    { NULL,NULL,NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next =  { MENU_MAIN,MENU_MAIN,MENU_MAIN,MENU_MAIN, MENU_MAIN},
+		.cb =    { NULL,NULL,NULL,NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init =  NULL
     },
 	{ //MENU_MAIN
 		.lines = { MENU_MAIN_L1,MENU_MAIN_L2,MENU_MAIN_L3,MENU_MAIN_L4},
-		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP},
-		.cb    = { NULL,NULL,NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
+		.cb    = { NULL,NULL,NULL,NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = main_init
 	},
 	{ //MENU_SETUP
 		.lines = { MENU_SETUP_L1,MENU_SETUP_L2,MENU_SETUP_L3,MENU_SETUP_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_EDIT_CAM,MENU_GENERAL_SETUP},
-		.cb    = { setup_cam_down,setup_cam_up,param_resetId,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_EDIT_CAM,MENU_GENERAL_SETUP,MENU_GENERAL_SETUP},
+		.cb    = { setup_cam_down,setup_cam_up,param_resetId,NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init =  setup_show_cam
 	},
 	{ //MENU_EDIT_CAM
 		.lines = { MENU_EDIT_CAM_L1,MENU_EDIT_CAM_L2,MENU_EDIT_CAM_L3,MENU_EDIT_CAM_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_SETUP},
-		.cb    = { param_next,param_up, param_up, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_SETUP,MENU_SETUP},
+		.cb    = { param_next,param_up, param_up, NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = param_show
 	},
 	{ //MENU_STORE
 		.lines = { MENU_STORE_L1,MENU_STORE_L2,MENU_STORE_L3,MENU_STORE_L4},
-		.next  = { MENU_INVALID,MENU_CLEAR,MENU_INVALID,MENU_MAIN},
-		.cb    = { NULL,NULL, NULL, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_INVALID,MENU_CLEAR,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+		.cb    = { NULL,NULL, NULL, NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL
 	},
 	{ //MENU_CLEAR
 		.lines = { MENU_CLEAR_L1,MENU_CLEAR_L2,MENU_CLEAR_L3,MENU_CLEAR_L4},
-		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN},
-		.cb    = { store_clear,NULL, NULL, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+		.cb    = { store_clear,NULL, NULL, NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL
 	}, 
 	{ //MENU_GENERAL_SETUP
 		.lines = { MENU_GENERAL_SETUP_L1,MENU_GENERAL_SETUP_L2,MENU_GENERAL_SETUP_L3,MENU_GENERAL_SETUP_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN},
-		.cb    = { setup_menu_prev,setup_menu_next, setup_menu_enter, save_data},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+		.cb    = { setup_menu_prev,setup_menu_next, setup_menu_enter, save_data,setup_menu_enter},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = setup_reset
 	}, 
 	{ //MENU_RESET
 		.lines = { MENU_RESET_L1,MENU_RESET_L2,MENU_RESET_L3,MENU_RESET_L4},
-		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN},
-		.cb    = { load_default,NULL, NULL, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+		.cb    = { load_default,NULL, NULL, NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL
 	},  
 	{ //MENU_CTRL
 		.lines = { MENU_CTRL_L1,MENU_CTRL_L2,MENU_CTRL_L3,MENU_CTRL_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_GENERAL_SETUP},
-		.cb    = { ctrl_cam_down,ctrl_cam_up, NULL, NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_GENERAL_SETUP,MENU_CTRL_EDIT},
+		.cb    = { ctrl_cam_down,ctrl_cam_up, NULL, NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = ctrl_cam_show
 	},  
 	{ //MENU_CTRL_EDIT
 		.lines = { MENU_CTRL_EDIT_L1,MENU_CTRL_EDIT_L2,MENU_CTRL_EDIT_L3,MENU_CTRL_EDIT_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_CTRL},
-		.cb    = { cam_power_on,cam_power_off, cam_button_press, NULL},
-		.cb_r=   { NULL,NULL,cam_button_release,NULL},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_CTRL,MENU_INVALID},
+		.cb    = { cam_power_on,cam_power_off, cam_button_press, NULL,NULL},
+		.cb_r=   { NULL,NULL,cam_button_release,NULL,NULL},
 		.init  = cam_power_show
 	} ,  
 	{ //MENU_LOCKED
 		.lines = { MENU_LOCKED_L1,MENU_LOCKED_L2,MENU_LOCKED_L3,MENU_LOCKED_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
-		.cb    = { lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
+		.cb    = { lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL
 	} ,  
 	{ //MENU_LOCK_SETUP
 		.lines = { MENU_LOCK_SETUP_L1,MENU_LOCK_SETUP_L2,MENU_LOCK_SETUP_L3,MENU_LOCK_SETUP_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
-		.cb    = {lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed},
-		.cb_r=   { NULL,NULL,NULL,NULL},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
+		.cb    = {lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL
 	}
 };
@@ -176,6 +176,7 @@ void process_menu(void)
 			case SK2: 
 			case SK3:
 			case SK4: 
+			case ROT:
 				old = active_menu;
 
 				if(menues[active_menu].cb[button] != NULL)
@@ -185,8 +186,8 @@ void process_menu(void)
 					set_menu(menues[active_menu].next[button]);
 			break;
 			default:
-				if(menues[active_menu].cb_r[button-4] != NULL)
-						menues[active_menu].cb_r[button-4]();	
+				if(menues[active_menu].cb_r[button-5] != NULL)
+						menues[active_menu].cb_r[button-5]();	
 
 			break;
 					

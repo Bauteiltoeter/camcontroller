@@ -9,10 +9,12 @@
 		SK2=1,
 		SK3=2,
 		SK4=3,
-		SK1_R = 4,
-		SK2_R = 5,
-		SK3_R = 6,
-		SK4_R = 7
+		ROT=4,
+		SK1_R = 5,
+		SK2_R = 6,
+		SK3_R = 7,
+		SK4_R = 8,
+		ROT_R = 9
 	} softkey_t;
 
 	typedef enum {
