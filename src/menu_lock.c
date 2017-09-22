@@ -1,5 +1,6 @@
 #include "menu_lock.h"
 #include "menu_system.h"
+#include "lcd.h"
 #include <stdint.h>
 #include <avr/eeprom.h>
 

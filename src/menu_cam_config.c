@@ -178,7 +178,8 @@ void param_show(void)
 			.max = 255,
 			.change = param_show,
 			.multi = 1,
-			.wrap = 1
+			.wrap = 1,
+			.leds_on = 1
 		};
 
 	if(cam_setup_parameters[param_id].type == type_uint16)

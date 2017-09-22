@@ -43,7 +43,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.pan_address = 0,
 		.tilt_address = 2,
 		.speed_address = 4,
-		.switch_address = 5,
+		.switch_address = 7,
 		.pan_invert = 0,
 		.tilt_invert=0,
 		.pan_scaling = 30,
@@ -61,7 +61,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.pan_address = 0,
 		.tilt_address = 2,
 		.speed_address = 4,
-		.switch_address = 5,
+		.switch_address = 7,
 		.pan_invert = 0,
 		.tilt_invert=0,
 		.pan_scaling = 30,
@@ -79,7 +79,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.pan_address = 0,
 		.tilt_address = 2,
 		.speed_address = 4,
-		.switch_address = 5,
+		.switch_address = 7,
 		.pan_invert = 0,
 		.tilt_invert=0,
 		.pan_scaling = 30,
@@ -98,13 +98,13 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.tilt_address = 0xFFFF,
 		.speed_address = 0xFFFF,
 		.switch_address = 0xFFFF,
-		.pan_invert = 0xFFFF,
-		.tilt_invert=0xFFFF,
+		.pan_invert = 0xFF,
+		.tilt_invert=0xFF,
 		.pan_scaling = 0xFFFF,
 		.tilt_scaling = 0xFFFF,
-		.pan = 0xFFFF, 
-		.tilt = 0xFFFF,
-		.speed = 0xFFFF,
+		.pan = 0xFF, 
+		.tilt = 0xFF,
+		.speed = 0xFF,
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.button_state = 0,
@@ -135,16 +135,6 @@ int main (void)
 
 	uint8_t loop=0;
 
-	rotary_config_t test;
-
-	test.type=rotary_uint8;
-	test.data_u8 = &cams[0].pan;
-	test.change = main_show;
-	test.min = 10;
-	test.max = 20;
-
-	rotary_setconfig(&test);
-	
 	while(1)
 	{
 		blink_counter++;

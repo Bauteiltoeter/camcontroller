@@ -1,5 +1,7 @@
+#include "menu_cam_ctrl.h"
 #include "globals.h"
 #include "lcd.h"
+#include "dmx.h"
 
 
 uint8_t ctrl_selected_cam=0;

@@ -17,6 +17,7 @@ typedef struct {
 	uint16_t max;
 	uint8_t multi;
 	uint8_t wrap;
+	uint8_t leds_on;
 
 } rotary_config_t;
 

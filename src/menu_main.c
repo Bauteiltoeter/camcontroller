@@ -1,6 +1,7 @@
 #include "menu_main.h"
 #include "globals.h"
 #include "rotary.h"
+#include "lcd.h"
 #include <stdio.h>
 
 void main_init(void)
@@ -13,7 +14,8 @@ void main_init(void)
 			.max = 255,
 			.change = main_show,
 			.multi = 5,
-			.wrap = 0
+			.wrap = 0,
+			.leds_on = 1
 		};
 
 	rotary_speed_config.data_u8 = &cams[active_cam].speed;

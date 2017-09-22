@@ -4,6 +4,7 @@
 	#include <stdint.h>
 #include <stdlib.h>
 #include <avr/pgmspace.h>
+#include "rotary.h"
 
 	typedef enum {
 		MENU_SPLASH =0,
@@ -35,7 +36,7 @@
 		menu_button cb[5];			//Callback for buttonpresses
 		menu_button cb_r[5];
 		init_function init;			//Init function
-	
+		rotary_config_t* rotary;
 	} menu_t;
 
 	extern __flash const menu_t menues[];

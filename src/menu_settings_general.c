@@ -1,5 +1,6 @@
 #include "menu_settings_general.h"
 #include "menu_system.h"
+#include "lcd.h"
 uint8_t current_menu=0;
 
 typedef struct {

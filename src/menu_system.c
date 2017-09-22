@@ -80,84 +80,96 @@ __flash const menu_t menues[] =
 		.next =  { MENU_MAIN,MENU_MAIN,MENU_MAIN,MENU_MAIN, MENU_MAIN},
 		.cb =    { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init =  NULL
+		.init =  NULL,
+		.rotary= NULL
     },
 	{ //MENU_MAIN
 		.lines = { MENU_MAIN_L1,MENU_MAIN_L2,MENU_MAIN_L3,MENU_MAIN_L4},
 		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
 		.cb    = { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = main_init
+		.init  = main_init,
+		.rotary= NULL
 	},
 	{ //MENU_SETUP
 		.lines = { MENU_SETUP_L1,MENU_SETUP_L2,MENU_SETUP_L3,MENU_SETUP_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_EDIT_CAM,MENU_GENERAL_SETUP,MENU_GENERAL_SETUP},
 		.cb    = { setup_cam_down,setup_cam_up,param_resetId,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init =  setup_show_cam
+		.init =  setup_show_cam,
+		.rotary= NULL
 	},
 	{ //MENU_EDIT_CAM
 		.lines = { MENU_EDIT_CAM_L1,MENU_EDIT_CAM_L2,MENU_EDIT_CAM_L3,MENU_EDIT_CAM_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_SETUP,MENU_SETUP},
 		.cb    = { param_next,param_up, param_up, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = param_show
+		.init  = param_show,
+		.rotary= NULL
 	},
 	{ //MENU_STORE
 		.lines = { MENU_STORE_L1,MENU_STORE_L2,MENU_STORE_L3,MENU_STORE_L4},
 		.next  = { MENU_INVALID,MENU_CLEAR,MENU_INVALID,MENU_MAIN,MENU_INVALID},
 		.cb    = { NULL,NULL, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = NULL
+		.init  = NULL,
+		.rotary= NULL
 	},
 	{ //MENU_CLEAR
 		.lines = { MENU_CLEAR_L1,MENU_CLEAR_L2,MENU_CLEAR_L3,MENU_CLEAR_L4},
 		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
 		.cb    = { store_clear,NULL, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = NULL
+		.init  = NULL,
+		.rotary= NULL
 	}, 
 	{ //MENU_GENERAL_SETUP
 		.lines = { MENU_GENERAL_SETUP_L1,MENU_GENERAL_SETUP_L2,MENU_GENERAL_SETUP_L3,MENU_GENERAL_SETUP_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
 		.cb    = { setup_menu_prev,setup_menu_next, setup_menu_enter, save_data,setup_menu_enter},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = setup_reset
+		.init  = setup_reset,
+		.rotary= NULL
 	}, 
 	{ //MENU_RESET
 		.lines = { MENU_RESET_L1,MENU_RESET_L2,MENU_RESET_L3,MENU_RESET_L4},
 		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
 		.cb    = { load_default,NULL, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = NULL
+		.init  = NULL,
+		.rotary= NULL
 	},  
 	{ //MENU_CTRL
 		.lines = { MENU_CTRL_L1,MENU_CTRL_L2,MENU_CTRL_L3,MENU_CTRL_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_GENERAL_SETUP,MENU_CTRL_EDIT},
 		.cb    = { ctrl_cam_down,ctrl_cam_up, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = ctrl_cam_show
+		.init  = ctrl_cam_show,
+		.rotary= NULL
 	},  
 	{ //MENU_CTRL_EDIT
 		.lines = { MENU_CTRL_EDIT_L1,MENU_CTRL_EDIT_L2,MENU_CTRL_EDIT_L3,MENU_CTRL_EDIT_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_CTRL,MENU_INVALID},
 		.cb    = { cam_power_on,cam_power_off, cam_button_press, NULL,NULL},
 		.cb_r=   { NULL,NULL,cam_button_release,NULL,NULL},
-		.init  = cam_power_show
+		.init  = cam_power_show,
+		.rotary= NULL
 	} ,  
 	{ //MENU_LOCKED
 		.lines = { MENU_LOCKED_L1,MENU_LOCKED_L2,MENU_LOCKED_L3,MENU_LOCKED_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
 		.cb    = { lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = NULL
+		.init  = NULL,
+		.rotary= NULL
 	} ,  
 	{ //MENU_LOCK_SETUP
 		.lines = { MENU_LOCK_SETUP_L1,MENU_LOCK_SETUP_L2,MENU_LOCK_SETUP_L3,MENU_LOCK_SETUP_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
 		.cb    = {lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = NULL
+		.init  = NULL,
+		.rotary= NULL
 	}
 };
 
@@ -209,6 +221,8 @@ void set_menu(menu_identifiers menu)
 
 	if(menues[menu].init)
 		menues[menu].init();
+
+	//NULL is also valid here, so no NULL check (disable rotary)
 
 	update_leds();
 
