@@ -223,6 +223,7 @@ void reset_store_led(uint8_t led)
 		case 2: LED_STORE_PORT |= (1<<LED_STORE_3); break;
 		case 3: LED_STORE_PORT |= (1<<LED_STORE_4); break;
 	}	
+
 }
 
 void set_cam_leds(uint8_t active)
@@ -250,6 +251,12 @@ void set_cam_leds(uint8_t active)
 				LED_CAM_4_PORT &=~(1<<LED_CAM_4);
 				break;
 	}
+}
+
+void set_rotarys_leds(uint8_t number)
+{
+
+
 }
 
 

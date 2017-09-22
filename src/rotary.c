@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rotary.h"
+#include "hardware.h"
 
 #define ROTARY_DDR DDRA
 #define ROTARY_PORT PORTA
@@ -84,17 +85,20 @@ void rotary_process(void)
 
 								if( diff>0  && tmp > current_config->max )
 								{
-									tmp = current_config->max;
+									tmp = current_config->wrap==1? current_config->min : current_config->max;
 								}
 								else if( diff < 0 &&  tmp < (int32_t)current_config->min )
 								{
-									tmp = current_config->min;
+									tmp = current_config->wrap==1? current_config->max : current_config->min;
 								}
 
 								*(current_config->data_u16)=tmp;
 
 			break;
 		}		
+
+		uint8_t number_of_leds = (32.0 / current_config->max-current_config->min+1) * (float)tmp;
+		set_rotarys_leds(number_of_leds);
 
 		if(current_config->change)
 			current_config->change();
