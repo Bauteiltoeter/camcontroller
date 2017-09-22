@@ -2,7 +2,7 @@
 #include "globals.h"
 #include "lcd.h"
 #include "dmx.h"
-
+#include <stdlib.h>
 
 uint8_t ctrl_selected_cam=0;
 

@@ -3,6 +3,7 @@
 #include "rotary.h"
 #include "lcd.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void main_init(void)
 {

@@ -44,8 +44,8 @@
 	void hardware_init(void);
 	softkey_t get_softkeys(void);
 	camkey_t get_camkeys(void);
-	storekey_t get_storekey(void);
-	rotselkey_t get_rotselkey(void);
+	storekey_t get_storekeys(void);
+	rotselkey_t get_rotselkeys(void);
 	void set_store_led(uint8_t led);
 	void reset_store_led(uint8_t led);
 	void set_cam_leds(uint8_t active);

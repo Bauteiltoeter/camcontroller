@@ -14,6 +14,7 @@
 #include "menu_system.h"
 #include "menu_main.h"
 #include "menu_lock.h"
+#include "menu_cam_ctrl.h"
 #include "globals.h"
 
 
@@ -325,7 +326,7 @@ void process_inputs(void)
 			main_show();
 	}
 
-	rotselkey_t rotsel = get_rotselkey();
+	rotselkey_t rotsel = get_rotselkeys();
 
 	if(rotsel != ROTSEL_NO_KEY)
 	{

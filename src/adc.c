@@ -2,7 +2,6 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <stdio.h>
-#define F_CPU 16000000
 #include <util/delay.h>
 #include "adc.h"
 #include "lcd.h"

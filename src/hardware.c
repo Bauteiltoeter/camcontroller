@@ -76,9 +76,9 @@ void hardware_init(void)
 camkey_t get_camkeys(void)
 {	
 	static uint8_t old_k1=0;
-	static uint8_t old_k2=0;
-	static uint8_t old_k3=0;
-	static uint8_t old_k4=0;
+//static uint8_t old_k2=0;
+//	static uint8_t old_k3=0;
+//	static uint8_t old_k4=0;
 
 
 	if( (CAMKEY_PIN & (1<<CAMKEY_1)) )
@@ -198,7 +198,7 @@ storekey_t get_storekeys(void)
 	return STORE_NO_KEY;
 }
 
-rotselkey_t get_rotselkey(void)
+rotselkey_t get_rotselkeys(void)
 {
 	return ROTSEL1;
 }

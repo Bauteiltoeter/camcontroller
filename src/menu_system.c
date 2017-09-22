@@ -11,6 +11,7 @@
 void store_clear(void);
 void save_data(void);
 void load_default(void);
+void update_leds(void);
 
 static const char MENU_SPLASH_L1[] PROGMEM			= "DragonVideo         ";
 static const char MENU_SPLASH_L2[] PROGMEM			= "By Karrn            ";
