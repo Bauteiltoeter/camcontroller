@@ -6,6 +6,17 @@
 
 uint8_t ctrl_selected_cam=0;
 
+rotary_config_t rotary_menu_ctrl = 
+{
+	.data_u8 = &ctrl_selected_cam,
+	.type = rotary_uint8,
+	.min = 0,
+	.max = CAM_COUNT,
+	.change = ctrl_cam_show,
+	.multi = 1,
+	.wrap = 1,
+	.leds_on = 0
+};
 
 void ctrl_cam_up(void)
 {

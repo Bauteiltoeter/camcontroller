@@ -89,7 +89,7 @@ __flash const menu_t menues[] =
 		.cb    = { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = main_init,
-		.rotary= NULL
+		.rotary= NULL //the main menu uses the rotary encoder, but it's initialised in the main_init
 	},
 	{ //MENU_SETUP
 		.lines = { MENU_SETUP_L1,MENU_SETUP_L2,MENU_SETUP_L3,MENU_SETUP_L4},
@@ -97,7 +97,7 @@ __flash const menu_t menues[] =
 		.cb    = { setup_cam_down,setup_cam_up,param_resetId,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init =  setup_show_cam,
-		.rotary= NULL
+		.rotary= NULL 
 	},
 	{ //MENU_EDIT_CAM
 		.lines = { MENU_EDIT_CAM_L1,MENU_EDIT_CAM_L2,MENU_EDIT_CAM_L3,MENU_EDIT_CAM_L4},
@@ -105,7 +105,7 @@ __flash const menu_t menues[] =
 		.cb    = { param_next,param_up, param_up, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = param_show,
-		.rotary= NULL
+		.rotary= NULL //the cam edit menu uses the rotary encoder, but it's initialised in parm_show
 	},
 	{ //MENU_STORE
 		.lines = { MENU_STORE_L1,MENU_STORE_L2,MENU_STORE_L3,MENU_STORE_L4},
@@ -129,7 +129,7 @@ __flash const menu_t menues[] =
 		.cb    = { setup_menu_prev,setup_menu_next, setup_menu_enter, save_data,setup_menu_enter},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = setup_reset,
-		.rotary= NULL
+		.rotary= &rotary_menu_settings_general
 	}, 
 	{ //MENU_RESET
 		.lines = { MENU_RESET_L1,MENU_RESET_L2,MENU_RESET_L3,MENU_RESET_L4},
@@ -145,7 +145,7 @@ __flash const menu_t menues[] =
 		.cb    = { ctrl_cam_down,ctrl_cam_up, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = ctrl_cam_show,
-		.rotary= NULL
+		.rotary= &rotary_menu_ctrl
 	},  
 	{ //MENU_CTRL_EDIT
 		.lines = { MENU_CTRL_EDIT_L1,MENU_CTRL_EDIT_L2,MENU_CTRL_EDIT_L3,MENU_CTRL_EDIT_L4},
@@ -223,6 +223,7 @@ void set_menu(menu_identifiers menu)
 		menues[menu].init();
 
 	//NULL is also valid here, so no NULL check (disable rotary)
+	rotary_setconfig(menues[menu].rotary);
 
 	update_leds();
 

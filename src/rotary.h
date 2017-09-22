@@ -1,6 +1,8 @@
 #ifndef __ROTARY_H
 #define __ROTARY_H
 
+#include <stdint.h>
+
 typedef void(*rotary_changenote)(void);
 
 typedef enum {

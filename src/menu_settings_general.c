@@ -33,6 +33,17 @@ setting_menu_t setting_menues[] = {
 };
 
 
+rotary_config_t rotary_menu_settings_general = {
+	.data_u8 = &current_menu,
+	.type = rotary_uint8,
+	.min = 0,
+	.max = (sizeof(setting_menues)/sizeof(setting_menu_t)),
+	.change = setup_menu_show,
+	.multi = 1,
+	.wrap = 1,
+	.leds_on = 0
+};
+
 void setup_menu_next(void)
 {
 	current_menu++;
