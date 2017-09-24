@@ -1,76 +1,77 @@
 #include "hardware.h"
 #include <avr/io.h>
 
-	#define SOFTKEY_DDR DDRC
-	#define SOFTKEY_PORT PORTC
-	#define SOFTKEY_PIN PINC
+#define BUTTON_ROW_1 0 //change set_row if changed!!!
+#define BUTTON_ROW_2 1
+#define BUTTON_ROW_3 2
+#define BUTTON_ROW_4 3
 
-	#define SOFTKEY_1 0
-	#define SOFTKEY_2 1
-	#define SOFTKEY_3 2
-	#define SOFTKEY_4 3
 
-	#define CAMKEY_DDR DDRC
-	#define CAMKEY_PORT PORTC
-	#define CAMKEY_PIN PINC
-	#define CAMKEY_1 4
-	#define CAMKEY_2 5
-	#define CAMKEY_3 6
-	#define CAMKEY_4 7
+#define BUTTON_ROW_PORT PORTA
+#define BUTTON_ROW_DDR DDRA
+#define BUTTON_ROW_PIN PINA
+#define BUTTON_COL_PORT PORTB
+#define BUTTON_COL_DDR DDRB
+#define BUTTON_COL_PIN PINB
 
-	#define STOREKEY_DDR DDRD
-	#define STOREKEY_PORT PORTD
-	#define STOREKEY_PIN PIND
+#define CAMKEY_POS 0
+#define CAMKEY_1 (button_states[0]&(1<CAMKEY_POS))
+#define CAMKEY_2 (button_states[1]&(1<CAMKEY_POS))
+#define CAMKEY_3 (button_states[2]&(1<CAMKEY_POS))
+#define CAMKEY_4 (button_states[3]&(1<CAMKEY_POS))
 
-	#define STORE_1 7
-	#define STORE_2 6
-	#define STORE_3 5
-	#define STORE_4 4
+#define STOREKEY_POS 1
+#define STOREKEY_1 (button_states[0]&(1<STOREKEY_POS))
+#define STOREKEY_2 (button_states[1]&(1<STOREKEY_POS))
+#define STOREKEY_3 (button_states[2]&(1<STOREKEY_POS))
+#define STOREKEY_4 (button_states[3]&(1<STOREKEY_POS))
 
-	#define LED_CAM_1_DDR DDRA
-	#define LED_CAM_1_PORT PORTA
-	#define LED_CAM_1 7
+#define SOFTKEY_POS 2
+#define SOFTKEY_1 (button_states[0]&(1<SOFTKEY_POS))
+#define SOFTKEY_2 (button_states[1]&(1<SOFTKEY_POS))
+#define SOFTKEY_3 (button_states[2]&(1<SOFTKEY_POS))
+#define SOFTKEY_4 (button_states[3]&(1<SOFTKEY_POS))
 
-	#define LED_CAM_2_DDR DDRB
-	#define LED_CAM_2_PORT PORTB
-	#define LED_CAM_2 7
 
-	#define LED_CAM_3_DDR DDRA
-	#define LED_CAM_3_PORT PORTA
-	#define LED_CAM_3 6
-
-	#define LED_CAM_4_DDR DDRD
-	#define LED_CAM_4_PORT PORTD
-	#define LED_CAM_4 3
-
-	#define LED_STORE_DDR DDRA
-	#define LED_STORE_PORT PORTA
-	#define LED_STORE_1 2
-	#define LED_STORE_2 3
-	#define LED_STORE_3 2
-	#define LED_STORE_4 3
+static uint8_t button_states[4];
 
 void hardware_init(void)
 {
-	SOFTKEY_DDR &= ~((1<<SOFTKEY_1) |  (1<<SOFTKEY_2) | (1<<SOFTKEY_3) | (1<<SOFTKEY_4));
-	SOFTKEY_PORT= (1<<SOFTKEY_1) |  (1<<SOFTKEY_2) | (1<<SOFTKEY_3) | (1<<SOFTKEY_4);
-
-	CAMKEY_DDR &=~((1<<CAMKEY_1) | (1<<CAMKEY_2) | (1<<CAMKEY_3) | (1<<CAMKEY_4)); 
-	CAMKEY_PORT |= (1<<CAMKEY_1) | (1<<CAMKEY_2) | (1<<CAMKEY_3) | (1<<CAMKEY_4);
-
-	STOREKEY_DDR &=~((1<<STORE_1) | (1<<STORE_2) | (1<<STORE_3) | (1<<STORE_4)); 
-	STOREKEY_PORT |= (1<<STORE_1) | (1<<STORE_2) | (1<<STORE_3) | (1<<STORE_4);
-
-	LED_STORE_DDR  |= (1<<LED_STORE_1) | (1<<LED_STORE_2) | (1<<LED_STORE_3) | (1<<LED_STORE_4); 
-	LED_STORE_PORT |= (1<<LED_STORE_1) | (1<<LED_STORE_2) | (1<<LED_STORE_3) | (1<<LED_STORE_4);
+	BUTTON_COL_DDR = 0x00; //All input
+	BUTTON_ROW_DDR &= ~((1<<BUTTON_ROW_1)|(1<<BUTTON_ROW_2)|(1<<BUTTON_ROW_3)|(1<<BUTTON_ROW_4));
 
 
-	LED_CAM_1_DDR |= (1<<LED_CAM_1);
-	LED_CAM_2_DDR |= (1<<LED_CAM_2);
-	LED_CAM_3_DDR |= (1<<LED_CAM_3);
-	LED_CAM_4_DDR |= (1<<LED_CAM_4);
+	hardware_tick();
+	hardware_tick();
+	hardware_tick();
+	hardware_tick();
+}
 
+static void set_row(uint8_t row)
+{
+	switch(row)
+	{
+		case 0: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0xF0)  | 0b0001; break;
+		case 1: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0xF0)  | 0b0010; break;
+		case 2: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0xF0)  | 0b0100; break;
+		case 3: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0xF0)  | 0b1000; break;
+	}
+}
 
+void hardware_tick(void)
+{
+	static uint8_t row=0;
+	set_row(row);
+
+	asm("NOP");
+	asm("NOP");
+	asm("NOP");
+
+	button_states[row]= BUTTON_COL_PIN;
+
+	row++;
+	if(row>3)
+		row=0;
 }
 
 camkey_t get_camkeys(void)
@@ -81,7 +82,7 @@ camkey_t get_camkeys(void)
 //	static uint8_t old_k4=0;
 
 
-	if( (CAMKEY_PIN & (1<<CAMKEY_1)) )
+	if(CAMKEY_1 )
 	{
 		if(old_k1==0)
 		{
@@ -94,18 +95,18 @@ camkey_t get_camkeys(void)
 		old_k1=0;
 	}
 
-	if( (CAMKEY_PIN & (1<<CAMKEY_2)))
+	if(CAMKEY_2)
 		return CAM2;
-	if( (CAMKEY_PIN & (1<<CAMKEY_3)))
+	if(CAMKEY_3)
 		return CAM3;
-	if( (CAMKEY_PIN & (1<<CAMKEY_4)))
+	if(CAMKEY_4)
 		return CAM4;
 	return CAM_NO_KEY;
 }
 
 uint8_t get_cam1_key(void)
 {
-	return (CAMKEY_PIN & (1<<CAMKEY_1));
+	//return (CAMKEY_PIN & (1<<CAMKEY_1));
 }
 
 softkey_t get_softkeys(void)
@@ -116,7 +117,7 @@ softkey_t get_softkeys(void)
 	static uint8_t old_k4=0;
 
 
-	if( (SOFTKEY_PIN & (1<<SOFTKEY_1)))
+	if( SOFTKEY_1)
 	{
 		if(old_k1==0)
 		{
@@ -133,7 +134,7 @@ softkey_t get_softkeys(void)
 		}
 	}
 
-	if( (SOFTKEY_PIN & (1<<SOFTKEY_2)))
+	if(SOFTKEY_2)
 	{
 		if(old_k2==0)
 		{
@@ -151,7 +152,7 @@ softkey_t get_softkeys(void)
 	}
 
 
-	if( (SOFTKEY_PIN & (1<<SOFTKEY_3)))
+	if(SOFTKEY_3)
 	{
 		if(old_k3==0)
 		{
@@ -169,7 +170,7 @@ softkey_t get_softkeys(void)
 	}
 
 
-	if( (SOFTKEY_PIN & (1<<SOFTKEY_4)))
+	if(SOFTKEY_4)
 	{
 		if(old_k4==0)
 		{
@@ -192,13 +193,13 @@ softkey_t get_softkeys(void)
 storekey_t get_storekeys(void)
 {	
 
-	if( (STOREKEY_PIN & (1<<STORE_1)))
+	if( STOREKEY_1)
 		return STORE1;
-	if( (STOREKEY_PIN & (1<<STORE_2)))
+	if( STOREKEY_2)
 		return STORE2;
-	if( (STOREKEY_PIN & (1<<STORE_3)))
+	if( STOREKEY_3)
 		return STORE3;
-	if( (STOREKEY_PIN & (1<<STORE_4)))
+	if( STOREKEY_4)
 		return STORE4;
 	return STORE_NO_KEY;
 }
@@ -210,52 +211,17 @@ rotselkey_t get_rotselkeys(void)
 
 void set_store_led(uint8_t led)
 {
-	switch(led)
-	{
-		case 0: LED_STORE_PORT &=~(1<<LED_STORE_1); break;
-		case 1: LED_STORE_PORT &=~(1<<LED_STORE_2); break;
-		case 2: LED_STORE_PORT &=~(1<<LED_STORE_3); break;
-		case 3: LED_STORE_PORT &=~(1<<LED_STORE_4); break;
-	}	
+	
 }
 
 void reset_store_led(uint8_t led)
 {
-	switch(led)
-	{
-		case 0: LED_STORE_PORT |= (1<<LED_STORE_1); break;
-		case 1: LED_STORE_PORT |= (1<<LED_STORE_2); break;
-		case 2: LED_STORE_PORT |= (1<<LED_STORE_3); break;
-		case 3: LED_STORE_PORT |= (1<<LED_STORE_4); break;
-	}	
 
 }
 
 void set_cam_leds(uint8_t active)
 {
-	switch(active)
-	{
-		case 0: LED_CAM_1_PORT &=~(1<<LED_CAM_1);
-				LED_CAM_2_PORT |= (1<<LED_CAM_2);
-				LED_CAM_3_PORT |= (1<<LED_CAM_3);
-				LED_CAM_4_PORT |= (1<<LED_CAM_4);
-				break;
-		case 1: LED_CAM_1_PORT |= (1<<LED_CAM_1);
-				LED_CAM_2_PORT &=~(1<<LED_CAM_2);
-				LED_CAM_3_PORT |= (1<<LED_CAM_3);
-				LED_CAM_4_PORT |= (1<<LED_CAM_4);
-				break;
-		case 2: LED_CAM_1_PORT |= (1<<LED_CAM_1);
-				LED_CAM_2_PORT |= (1<<LED_CAM_2);
-				LED_CAM_3_PORT &=~(1<<LED_CAM_3);
-				LED_CAM_4_PORT |= (1<<LED_CAM_4);
-				break;
-		case 3: LED_CAM_1_PORT |= (1<<LED_CAM_1);
-				LED_CAM_2_PORT |= (1<<LED_CAM_2);
-				LED_CAM_3_PORT |= (1<<LED_CAM_3);
-				LED_CAM_4_PORT &=~(1<<LED_CAM_4);
-				break;
-	}
+
 }
 
 void set_rotarys_leds(uint8_t number)

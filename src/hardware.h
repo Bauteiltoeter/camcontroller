@@ -52,6 +52,7 @@
 		ROTSEL4 = 3
 	} rotselkey_t;
 
+	void hardware_tick(void);
 	void hardware_init(void);
 	softkey_t get_softkeys(void);
 	camkey_t get_camkeys(void);

@@ -183,6 +183,7 @@ int main (void)
 			loop=0;
 		}
 		
+		hardware_tick();
 		rotary_tick();
 		//awkward delay here.. should be replaced by a timer. But it works, DMX is interrupt-driven
 		_delay_ms(0.5);
