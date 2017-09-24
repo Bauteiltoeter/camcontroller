@@ -1,8 +1,19 @@
+/**
+ * \file hardware.h
+ * \author Torben Hellige
+ * \brief This file provides an abstraction layer to the hardware. All hardware-related calls for LEDs and buttons are done here
+ */
+
 #ifndef __HARDWARE_H
 #define __HARDWARE_H
 
 #include <stdint.h>
 
+/**
+ * \enum softkey_t
+ *
+ *
+ */ 
 	typedef enum {
 		NO_KEY=255,
 		SK1=0,

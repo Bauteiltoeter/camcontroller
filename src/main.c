@@ -143,10 +143,12 @@ int main (void)
 
 		if(loop==10)
 		{  
+			blink_counter++;
 			if(active_menu != MENU_LOCKED)
 			{
 				//Process analog inputs, cam changes and store requests
 				process_inputs();
+				rotary_process();
 			}
 
 			//Process the menu system  / softkeys
@@ -154,20 +156,20 @@ int main (void)
 		
 
 			//The STORE-LEDs should flash if MENU_STORE or MENU_CLEAR is selected
-			if((active_menu == MENU_STORE || active_menu == MENU_CLEAR) && blink_counter % 20 == 0)
+			if((active_menu == MENU_STORE || active_menu == MENU_CLEAR) && blink_counter % 16 == 0)
 			{
 				for(int i=0; i < STORE_COUNT; i++)
 					reset_store_led(i);
 			}
 
-			if((active_menu == MENU_STORE || active_menu == MENU_CLEAR )&& blink_counter % 40 == 0)
-			{
+			if((active_menu == MENU_STORE || active_menu == MENU_CLEAR )&& blink_counter % 32 == 0)
+			{12
 				for(int i=0; i < STORE_COUNT; i++)
 					set_store_led(i);
 			}
 	
 
-			rotary_process();
+			
 			loop=0;
 		}
 		
