@@ -19,6 +19,7 @@
 		MENU_CTRL_EDIT = 9,
 		MENU_LOCKED = 10,
 		MENU_LOCK_SETUP = 11,
+		MENU_ALL_POWER = 12,
 		MENU_INVALID = 255
 	} menu_identifiers;
 

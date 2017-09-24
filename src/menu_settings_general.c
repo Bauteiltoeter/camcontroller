@@ -19,6 +19,10 @@ setting_menu_t setting_menues[] = {
 		.description = "Camera controlling  "
 	},
 	{
+		.menu = MENU_ALL_POWER,
+		.description = "General camera power"
+	},
+	{
 		.menu = MENU_LOCKED,
 		.description = "Lock cam controller "
 	},

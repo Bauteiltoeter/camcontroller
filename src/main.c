@@ -380,3 +380,20 @@ void unlock_system(void)
 	eeprom_write_byte(&menu_lock_active, 0);
 }
 
+void send_switch_state(uint8_t cam)
+{
+	uint8_t dmx;
+
+	if(!cams[cam].button_state && !cams[cam].power_state)
+		dmx=5;
+	else if(!cams[cam].button_state && cams[cam].power_state)
+		dmx=64;
+	else if(cams[cam].button_state && !cams[cam].power_state)
+		dmx=128;
+	else if(cams[cam].button_state && cams[cam].power_state)
+		dmx=255;
+
+
+	write_dmx(cams[cam].base_addr + cams[cam].switch_address, dmx);
+}
+

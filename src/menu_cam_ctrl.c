@@ -4,6 +4,8 @@
 #include "dmx.h"
 #include <stdlib.h>
 
+extern void send_switch_state(uint8_t cam); //Function defined in main
+
 uint8_t ctrl_selected_cam=0;
 
 rotary_config_t rotary_menu_ctrl = 
@@ -124,17 +126,5 @@ void cam_power_show(void)
 
 void send_switch(void)
 {
-	uint8_t dmx;
-
-	if(!cams[ctrl_selected_cam].button_state && !cams[ctrl_selected_cam].power_state)
-		dmx=0;
-	else if(!cams[ctrl_selected_cam].button_state && cams[ctrl_selected_cam].power_state)
-		dmx=64;
-	else if(cams[ctrl_selected_cam].button_state && !cams[ctrl_selected_cam].power_state)
-		dmx=128;
-	else if(cams[ctrl_selected_cam].button_state && cams[ctrl_selected_cam].power_state)
-		dmx=255;
-
-
-	write_dmx(cams[ctrl_selected_cam].base_addr + cams[ctrl_selected_cam].switch_address, dmx);
+	send_switch_state(ctrl_selected_cam);	
 }

@@ -4,6 +4,7 @@
 #include "menu_settings_general.h"
 #include "menu_cam_config.h"
 #include "menu_cam_ctrl.h"
+#include "menu_all_power.h"
 #include "lcd.h"
 #include "hardware.h"
 
@@ -73,6 +74,11 @@ static const char MENU_LOCK_SETUP_L1[] PROGMEM		= "Setup               ";
 static const char MENU_LOCK_SETUP_L2[] PROGMEM		= "Enter new code:     ";
 static const char MENU_LOCK_SETUP_L3[] PROGMEM		= "                    ";
 static const char MENU_LOCK_SETUP_L4[] PROGMEM		= " 1    2     3     4 ";
+
+static const char MENU_ALL_POWER_L1[] PROGMEM 		= "Setup               ";
+static const char MENU_ALL_POWER_L2[] PROGMEM 		= "                    ";
+static const char MENU_ALL_POWER_L3[] PROGMEM 		= "Switch all cams     ";
+static const char MENU_ALL_POWER_L4[] PROGMEM 		= "ON   OFF            ";
 
 //Define the menu structure
 __flash const menu_t menues[] =
@@ -169,6 +175,14 @@ __flash const menu_t menues[] =
 		.lines = { MENU_LOCK_SETUP_L1,MENU_LOCK_SETUP_L2,MENU_LOCK_SETUP_L3,MENU_LOCK_SETUP_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
 		.cb    = {lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
+		.init  = NULL,
+		.rotary= NULL
+	} ,  
+	{ //MENU_ALL_POWER
+		.lines = { MENU_ALL_POWER_L1,MENU_ALL_POWER_L2,MENU_ALL_POWER_L3,MENU_ALL_POWER_L4},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
+		.cb    = {switch_cams_on,switch_cams_off, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL,
 		.rotary= NULL
