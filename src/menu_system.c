@@ -8,10 +8,11 @@
 #include "hardware.h"
 
 
-void store_clear(void);
-void save_data(void);
-void load_default(void);
-void update_leds(void);
+extern void store_clear(void);
+extern void save_data(void);
+extern void load_default(void);
+extern void update_leds(void);
+extern void lock_system(void); 
 
 static const char MENU_SPLASH_L1[] PROGMEM			= "DragonVideo         ";
 static const char MENU_SPLASH_L2[] PROGMEM			= "By Karrn            ";
@@ -161,7 +162,7 @@ __flash const menu_t menues[] =
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
 		.cb    = { lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = NULL,
+		.init  = lock_system,
 		.rotary= NULL
 	} ,  
 	{ //MENU_LOCK_SETUP

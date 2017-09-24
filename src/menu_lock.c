@@ -8,7 +8,8 @@
 uint8_t code[] = {1,1,1,1};
 uint8_t code_eeprom[4] EEMEM;
 
-
+extern void lock_system(void);    //Functions from main
+extern void unlock_system(void);  //Functions from main
 static void lock_pressed(uint8_t n);
 
 void lock_load(void)
@@ -80,6 +81,7 @@ static void lock_pressed(uint8_t n)
 
 			if(error==0)
 			{
+				unlock_system();
 				set_menu(MENU_MAIN);
 			}
 			else

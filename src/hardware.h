@@ -57,6 +57,7 @@
 	camkey_t get_camkeys(void);
 	storekey_t get_storekeys(void);
 	rotselkey_t get_rotselkeys(void);
+	uint8_t get_cam1_key(void);
 	void set_store_led(uint8_t led);
 	void reset_store_led(uint8_t led);
 	void set_cam_leds(uint8_t active);

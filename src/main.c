@@ -27,6 +27,8 @@ void process_inputs(void);
 void update_leds(void);
 void load_default(void);
 
+void lock_system(void);
+void unlock_system(void);
 
 
 
@@ -114,7 +116,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 };
 
 cam_data_t backup_cams[CAM_COUNT] EEMEM; //store CAM Data in eeprom
-
+uint8_t menu_lock_active EEMEM;
 //Hauptprogramm
 int main (void) 
 {  
@@ -124,7 +126,15 @@ int main (void)
 	lock_load();
 
 	lcd_init(LCD_DISP_ON);
-	set_menu(MENU_SPLASH);
+
+	uint8_t lock_active=eeprom_read_byte(&menu_lock_active);
+	
+	//if the system was locked during last shutdown and camkey 1 is not pressed lock the system
+	if(lock_active && !get_cam1_key())
+		set_menu(MENU_LOCKED);
+	else
+		set_menu(MENU_SPLASH);
+
 	dmx_init();
 	ADC_Init();
 	rotary_init();
@@ -163,7 +173,7 @@ int main (void)
 			}
 
 			if((active_menu == MENU_STORE || active_menu == MENU_CLEAR )&& blink_counter % 32 == 0)
-			{12
+			{
 				for(int i=0; i < STORE_COUNT; i++)
 					set_store_led(i);
 			}
@@ -358,5 +368,15 @@ void load_default(void)
 
 	memcpy_P(cams,cams_default, sizeof(cams)); 
 	save_data();
+}
+
+void lock_system(void)
+{
+	eeprom_write_byte(&menu_lock_active, 1);
+}
+
+void unlock_system(void)
+{
+	eeprom_write_byte(&menu_lock_active, 0);
 }
 

@@ -103,6 +103,11 @@ camkey_t get_camkeys(void)
 	return CAM_NO_KEY;
 }
 
+uint8_t get_cam1_key(void)
+{
+	return (CAMKEY_PIN & (1<<CAMKEY_1));
+}
+
 softkey_t get_softkeys(void)
 {	
 	static uint8_t old_k1=0;
