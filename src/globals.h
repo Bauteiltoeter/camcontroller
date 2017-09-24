@@ -20,6 +20,7 @@
  * This struct contains all relevant data for one camera. It stores the DMX addresses, dmx values, setup parameter and positions
  */
 typedef struct  {
+	uint8_t  cam_active; //!< Is the cam active? (0/1)
 	uint16_t base_addr;	//!< DMX base address (0-512)
 	uint16_t pan_address;	//!< Offset of pan address from base
 	uint16_t tilt_address;	//!< Offset of tilt address from base

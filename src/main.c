@@ -220,10 +220,10 @@ void process_inputs(void)
 	//Change the active cam
 	switch(keys)
 	{
-		case CAM1: active_cam = 0; break;
-		case CAM2: active_cam = 1; break; 
-		case CAM3: active_cam = 2; break;
-		case CAM4: active_cam = 3; break;
+		case CAM1: active_cam = cams[0].cam_active ? 0 : active_cam; break;
+		case CAM2: active_cam = cams[1].cam_active ? 1 : active_cam; break; 
+		case CAM3: active_cam = cams[2].cam_active ? 2 : active_cam; break;
+		case CAM4: active_cam = cams[3].cam_active ? 3 : active_cam; break;
 		default: break;
 	}
 

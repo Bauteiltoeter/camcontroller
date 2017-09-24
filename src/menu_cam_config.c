@@ -30,6 +30,13 @@ typedef struct {
 const __flash cam_setup_parameters_t cam_setup_parameters[] = 
 {
 	{
+		.name = "Camera active       ",
+		.type = type_uint8,
+		.offset = offsetof(cam_data_t, cam_active),
+		.min = 0,
+		.max = 1
+	},
+	{
 		.name = "base_addr           ",
 		.type = type_uint16,
 		.offset = offsetof(cam_data_t, base_addr),
