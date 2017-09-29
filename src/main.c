@@ -130,10 +130,16 @@ int main (void)
 	uint8_t lock_active=eeprom_read_byte(&menu_lock_active);
 	
 	//if the system was locked during last shutdown and camkey 1 is not pressed lock the system
-	if(lock_active && !get_cam1_key())
+	if(lock_active==1 && !get_cam1_key())
+	{
 		set_menu(MENU_LOCKED);
+	}
 	else
+	{
+		if(lock_active==255)
+			unlock_system();
 		set_menu(MENU_SPLASH);
+	}
 
 	dmx_init();
 	ADC_Init();
@@ -151,7 +157,7 @@ int main (void)
 		blink_counter++;
 		loop++;
 
-		if(loop==10)
+		/*if(loop==10)
 		{  
 			blink_counter++;
 			if(active_menu != MENU_LOCKED)
@@ -181,7 +187,7 @@ int main (void)
 
 			
 			loop=0;
-		}
+		}*/
 		
 		hardware_tick();
 		rotary_tick();
