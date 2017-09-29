@@ -41,7 +41,7 @@
 
 
 # MCU name
-MCU = atmega644
+MCU = atmega1280
 
 
 # Processor frequency.

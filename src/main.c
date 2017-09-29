@@ -157,7 +157,7 @@ int main (void)
 		blink_counter++;
 		loop++;
 
-		if(loop==10)
+		/*if(loop==10)
 		{  
 			blink_counter++;
 			if(active_menu != MENU_LOCKED)
@@ -187,7 +187,7 @@ int main (void)
 
 			
 			loop=0;
-		}
+		}*/
 		
 		hardware_tick();
 		rotary_tick();
