@@ -110,7 +110,7 @@ __flash const menu_t menues[] =
 	{ //MENU_EDIT_CAM
 		.lines = { MENU_EDIT_CAM_L1,MENU_EDIT_CAM_L2,MENU_EDIT_CAM_L3,MENU_EDIT_CAM_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_SETUP,MENU_SETUP},
-		.cb    = { param_next,param_up, param_up, NULL,NULL},
+		.cb    = { param_next,param_up, param_down, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = param_show,
 		.rotary= NULL //the cam edit menu uses the rotary encoder, but it's initialised in parm_show
