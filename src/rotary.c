@@ -71,11 +71,11 @@ void rotary_process(void)
 
 								if( diff>0  && tmp > current_config->max )
 								{
-									tmp = current_config->max;
+									tmp = current_config->wrap==1? current_config->min : current_config->max;
 								}
 								else if( diff < 0 &&  tmp < (int16_t)current_config->min )
 								{
-									tmp = current_config->min;
+									tmp = current_config->wrap==1? current_config->max : current_config->min;
 								}
 
 								*(current_config->data_u8)=tmp;
