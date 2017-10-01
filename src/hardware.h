@@ -63,5 +63,6 @@
 	void reset_store_led(uint8_t led);
 	void set_cam_leds(uint8_t active);
 	void set_rotarys_leds(uint8_t number);
+	uint8_t get_matrix_line(uint8_t line);
 
 #endif

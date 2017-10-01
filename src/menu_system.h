@@ -20,12 +20,14 @@
 		MENU_LOCKED = 10,
 		MENU_LOCK_SETUP = 11,
 		MENU_ALL_POWER = 12,
+		MENU_HARDWARE = 13,
 		MENU_INVALID = 255
 	} menu_identifiers;
 
 
 	typedef void(*menu_button)(void);
 	typedef void(*init_function)(void);
+	typedef void(*cyclic_function)(void);
 
 	// This struct defines a menu page
 	// Each page contains the 4 LCD lines, the ID of the reachable menues, callbacks for each buttons and an init-function called when opening the menu
@@ -37,6 +39,7 @@
 		menu_button cb[5];			//Callback for buttonpresses
 		menu_button cb_r[5];
 		init_function init;			//Init function
+		cyclic_function cyclic;
 		rotary_config_t* rotary;
 	} menu_t;
 

@@ -31,6 +31,10 @@ setting_menu_t setting_menues[] = {
 		.description = "Enter lock code     "
 	},
 	{
+		.menu = MENU_HARDWARE,
+		.description = "Show hardware info  "
+	},
+	{
 		.menu = MENU_RESET,
 		.description = "Reset settings      "
 	}

@@ -5,6 +5,7 @@
 #include "menu_cam_config.h"
 #include "menu_cam_ctrl.h"
 #include "menu_all_power.h"
+#include "menu_hardware.h"
 #include "lcd.h"
 #include "hardware.h"
 
@@ -80,6 +81,11 @@ static const char MENU_ALL_POWER_L2[] PROGMEM 		= "                    ";
 static const char MENU_ALL_POWER_L3[] PROGMEM 		= "Switch all cams     ";
 static const char MENU_ALL_POWER_L4[] PROGMEM 		= "ON   OFF            ";
 
+static const char MENU_HARDWARE_L1[] PROGMEM 		= "                    ";
+static const char MENU_HARDWARE_L2[] PROGMEM 		= "                    ";
+static const char MENU_HARDWARE_L3[] PROGMEM 		= "                    ";
+static const char MENU_HARDWARE_L4[] PROGMEM 		= "                BACK";
+
 //Define the menu structure
 __flash const menu_t menues[] =
 { 	
@@ -89,6 +95,7 @@ __flash const menu_t menues[] =
 		.cb =    { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init =  NULL,
+		.cyclic = NULL,
 		.rotary= NULL
     },
 	{ //MENU_MAIN
@@ -97,6 +104,7 @@ __flash const menu_t menues[] =
 		.cb    = { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = main_init,
+		.cyclic = NULL,
 		.rotary= NULL //the main menu uses the rotary encoder, but it's initialised in the main_init
 	},
 	{ //MENU_SETUP
@@ -105,6 +113,7 @@ __flash const menu_t menues[] =
 		.cb    = { setup_cam_down,setup_cam_up,param_resetId,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init =  setup_show_cam,
+		.cyclic = NULL,
 		.rotary= NULL 
 	},
 	{ //MENU_EDIT_CAM
@@ -113,6 +122,7 @@ __flash const menu_t menues[] =
 		.cb    = { param_next,param_up, param_down, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = param_show,
+		.cyclic = NULL,
 		.rotary= NULL //the cam edit menu uses the rotary encoder, but it's initialised in parm_show
 	},
 	{ //MENU_STORE
@@ -121,6 +131,7 @@ __flash const menu_t menues[] =
 		.cb    = { NULL,NULL, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL,
+		.cyclic = NULL,
 		.rotary= NULL
 	},
 	{ //MENU_CLEAR
@@ -129,6 +140,7 @@ __flash const menu_t menues[] =
 		.cb    = { store_clear,NULL, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL,
+		.cyclic = NULL,
 		.rotary= NULL
 	}, 
 	{ //MENU_GENERAL_SETUP
@@ -137,6 +149,7 @@ __flash const menu_t menues[] =
 		.cb    = { setup_menu_prev,setup_menu_next, setup_menu_enter, save_data,setup_menu_enter},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = setup_reset,
+		.cyclic = NULL,
 		.rotary= &rotary_menu_settings_general
 	}, 
 	{ //MENU_RESET
@@ -145,6 +158,7 @@ __flash const menu_t menues[] =
 		.cb    = { load_default,NULL, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL,
+		.cyclic = NULL,
 		.rotary= NULL
 	},  
 	{ //MENU_CTRL
@@ -153,6 +167,7 @@ __flash const menu_t menues[] =
 		.cb    = { ctrl_cam_down,ctrl_cam_up, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = ctrl_cam_show,
+		.cyclic = NULL,
 		.rotary= &rotary_menu_ctrl
 	},  
 	{ //MENU_CTRL_EDIT
@@ -161,6 +176,7 @@ __flash const menu_t menues[] =
 		.cb    = { cam_power_on,cam_power_off, cam_button_press, NULL,NULL},
 		.cb_r=   { NULL,NULL,cam_button_release,NULL,NULL},
 		.init  = cam_power_show,
+		.cyclic = NULL,
 		.rotary= NULL
 	} ,  
 	{ //MENU_LOCKED
@@ -169,6 +185,7 @@ __flash const menu_t menues[] =
 		.cb    = { lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = lock_system,
+		.cyclic = NULL,
 		.rotary= NULL
 	} ,  
 	{ //MENU_LOCK_SETUP
@@ -177,6 +194,7 @@ __flash const menu_t menues[] =
 		.cb    = {lock_1_pressed,lock_2_pressed, lock_3_pressed, lock_4_pressed,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL,
+		.cyclic = NULL,
 		.rotary= NULL
 	} ,  
 	{ //MENU_ALL_POWER
@@ -185,6 +203,16 @@ __flash const menu_t menues[] =
 		.cb    = {switch_cams_on,switch_cams_off, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL,
+		.cyclic = NULL,
+		.rotary= NULL
+	} ,
+	{ //MENU_HARDWARE
+		.lines = { MENU_HARDWARE_L1,MENU_HARDWARE_L2,MENU_HARDWARE_L3,MENU_HARDWARE_L4},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
+		.cb    = { NULL,NULL,NULL,NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
+		.init  = NULL,
+		.cyclic = show_hardware_info,
 		.rotary= NULL
 	}
 };
@@ -221,6 +249,9 @@ void process_menu(void)
 					
 		}
 	}	
+
+	if(menues[active_menu].cyclic)
+		menues[active_menu].cyclic();
 }
 
 void set_menu(menu_identifiers menu)

@@ -265,4 +265,9 @@ void set_rotarys_leds(uint8_t number)
 
 }
 
+uint8_t get_matrix_line(uint8_t line)
+{
+	return button_states[line];
+}
+
 
