@@ -42,6 +42,7 @@ void unlock_system(void);
 const cam_data_t cams_default[CAM_COUNT] PROGMEM = 
 {
 	{
+		.cam_active = 1,
 		.base_addr = 0,
 		.pan_address = 0,
 		.tilt_address = 2,
@@ -60,6 +61,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.power_state = 1
 	},	
 	{
+		.cam_active = 1,
 		.base_addr = 16,
 		.pan_address = 0,
 		.tilt_address = 2,
@@ -78,6 +80,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.power_state = 1 
 	},
 	{
+		.cam_active = 1,
 		.base_addr = 32,
 		.pan_address = 0,
 		.tilt_address = 2,
@@ -96,6 +99,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.power_state = 1 
 	},
 	{
+		.cam_active = 0,
 		.base_addr = 0xFFFF,
 		.pan_address = 0xFFFF,
 		.tilt_address = 0xFFFF,

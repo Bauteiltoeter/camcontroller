@@ -4,12 +4,12 @@
 #include "rotary.h"
 #include "hardware.h"
 
-#define ROTARY_DDR DDRA
-#define ROTARY_PORT PORTA
-#define ROTARY_PIN PINA
+#define ROTARY_DDR DDRE
+#define ROTARY_PORT PORTE
+#define ROTARY_PIN PINE
 
-#define ROTARY_A 5
-#define ROTARY_B 4
+#define ROTARY_A 6
+#define ROTARY_B 5
 
 
 #define PHASE_A     (ROTARY_PIN & 1<<ROTARY_A)

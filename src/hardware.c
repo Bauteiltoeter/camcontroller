@@ -1,36 +1,41 @@
 #include "hardware.h"
 #include <avr/io.h>
 
-#define BUTTON_ROW_1 0 //change set_row if changed!!!
-#define BUTTON_ROW_2 1
-#define BUTTON_ROW_3 2
-#define BUTTON_ROW_4 3
+#define BUTTON_ROW_1 7 //change set_row if changed!!!
+#define BUTTON_ROW_2 6
+#define BUTTON_ROW_3 5
+#define BUTTON_ROW_4 4
 
 
-#define BUTTON_ROW_PORT PORTA
-#define BUTTON_ROW_DDR DDRA
-#define BUTTON_ROW_PIN PINA
-#define BUTTON_COL_PORT PORTB
-#define BUTTON_COL_DDR DDRB
-#define BUTTON_COL_PIN PINB
+#define BUTTON_ROW_PORT PORTD
+#define BUTTON_ROW_DDR DDRD
+#define BUTTON_ROW_PIN PIND
+#define BUTTON_COL_PORT PORTC
+#define BUTTON_COL_DDR DDRC
+#define BUTTON_COL_PIN PINC
 
-#define CAMKEY_POS 0
-#define CAMKEY_1 (button_states[0]&(1<CAMKEY_POS))
-#define CAMKEY_2 (button_states[1]&(1<CAMKEY_POS))
-#define CAMKEY_3 (button_states[2]&(1<CAMKEY_POS))
-#define CAMKEY_4 (button_states[3]&(1<CAMKEY_POS))
+#define CAMKEY_POS 1
+#define CAMKEY_1 !(button_states[0]&(1<<CAMKEY_POS))
+#define CAMKEY_2 !(button_states[1]&(1<<CAMKEY_POS))
+#define CAMKEY_3 !(button_states[2]&(1<<CAMKEY_POS))
+#define CAMKEY_4 !(button_states[3]&(1<<CAMKEY_POS))
 
-#define STOREKEY_POS 1
-#define STOREKEY_1 (button_states[0]&(1<STOREKEY_POS))
-#define STOREKEY_2 (button_states[1]&(1<STOREKEY_POS))
-#define STOREKEY_3 (button_states[2]&(1<STOREKEY_POS))
-#define STOREKEY_4 (button_states[3]&(1<STOREKEY_POS))
+#define STOREKEY_POS 0
+#define STOREKEY_1 !(button_states[0]&(1<<STOREKEY_POS))
+#define STOREKEY_2 !(button_states[1]&(1<<STOREKEY_POS))
+#define STOREKEY_3 !(button_states[2]&(1<<STOREKEY_POS))
+#define STOREKEY_4 !(button_states[3]&(1<<STOREKEY_POS))
 
-#define SOFTKEY_POS 2
-#define SOFTKEY_1 (button_states[0]&(1<SOFTKEY_POS))
-#define SOFTKEY_2 (button_states[1]&(1<SOFTKEY_POS))
-#define SOFTKEY_3 (button_states[2]&(1<SOFTKEY_POS))
-#define SOFTKEY_4 (button_states[3]&(1<SOFTKEY_POS))
+#define SOFTKEY_POS 0
+#define SOFTKEY_1 !(button_states[0]&(1<<SOFTKEY_POS))
+#define SOFTKEY_2 !(button_states[1]&(1<<SOFTKEY_POS))
+#define SOFTKEY_3 !(button_states[2]&(1<<SOFTKEY_POS))
+#define SOFTKEY_4 !(button_states[3]&(1<<SOFTKEY_POS))
+
+#define ROT_PUSH_PORT PORTE
+#define ROT_PUSH_PIN PINE
+#define ROT_PUSH_DDR DDRE
+#define ROT_PUSH 4
 
 
 static uint8_t button_states[4];
@@ -39,7 +44,7 @@ void hardware_init(void)
 {
 	BUTTON_COL_DDR = 0x00; //All input
 	BUTTON_ROW_DDR &= ~((1<<BUTTON_ROW_1)|(1<<BUTTON_ROW_2)|(1<<BUTTON_ROW_3)|(1<<BUTTON_ROW_4));
-
+	ROT_PUSH_DDR &= ~(1<<ROT_PUSH);
 
 	hardware_tick();
 	hardware_tick();
@@ -51,10 +56,10 @@ static void set_row(uint8_t row)
 {
 	switch(row)
 	{
-		case 0: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0xF0)  | 0b0001; break;
-		case 1: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0xF0)  | 0b0010; break;
-		case 2: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0xF0)  | 0b0100; break;
-		case 3: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0xF0)  | 0b1000; break;
+		case 0: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0x0F)  | (1<<BUTTON_ROW_1); break;
+		case 1: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0x0F)  | (1<<BUTTON_ROW_2); break;
+		case 2: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0x0F)  | (1<<BUTTON_ROW_3); break;
+		case 3: BUTTON_ROW_DDR =  (BUTTON_ROW_DDR & 0x0F)  | (1<<BUTTON_ROW_4); break;
 	}
 }
 
@@ -66,12 +71,24 @@ void hardware_tick(void)
 	asm("NOP");
 	asm("NOP");
 	asm("NOP");
+	asm("NOP");
+	asm("NOP");
+	asm("NOP");
+	asm("NOP");
+	asm("NOP");
+	asm("NOP");
 
 	button_states[row]= BUTTON_COL_PIN;
 
 	row++;
 	if(row>3)
 		row=0;
+
+	//lcd_gotoxy(0,row);
+	//char tmp[10];
+	//sprintf(tmp,"%02X", button_states[row]);
+	//lcd_puts(tmp);
+	
 }
 
 camkey_t get_camkeys(void)
@@ -115,6 +132,7 @@ softkey_t get_softkeys(void)
 	static uint8_t old_k2=0;
 	static uint8_t old_k3=0;
 	static uint8_t old_k4=0;
+	static uint8_t old_rot=0;
 
 
 	if( SOFTKEY_1)
@@ -184,6 +202,23 @@ softkey_t get_softkeys(void)
 		{
 			old_k4=0;
 			return SK4_R;
+		}
+	}
+
+	if(!(ROT_PUSH_PIN&(1<<ROT_PUSH)))
+	{
+		if(old_rot==0)
+		{
+			old_rot=1;
+			return ROT;
+		}
+	}
+	else
+	{
+		if(old_rot==1)
+		{
+			old_rot=0;
+			return ROT_R;
 		}
 	}
 
