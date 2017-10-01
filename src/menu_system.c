@@ -79,7 +79,7 @@ static const char MENU_LOCK_SETUP_L4[] PROGMEM		= " 1    2     3     4 ";
 static const char MENU_ALL_POWER_L1[] PROGMEM 		= "Setup               ";
 static const char MENU_ALL_POWER_L2[] PROGMEM 		= "                    ";
 static const char MENU_ALL_POWER_L3[] PROGMEM 		= "Switch all cams     ";
-static const char MENU_ALL_POWER_L4[] PROGMEM 		= "ON   OFF            ";
+static const char MENU_ALL_POWER_L4[] PROGMEM 		= "ON   OFF        BACK";
 
 static const char MENU_HARDWARE_L1[] PROGMEM 		= "                    ";
 static const char MENU_HARDWARE_L2[] PROGMEM 		= "                    ";

@@ -16,6 +16,7 @@
 #define PHASE_B     (ROTARY_PIN & 1<<ROTARY_B)
 
 static int8_t encode_read( void );
+static void calc_number_of_leds(int32_t tmp);
 
 
 static int8_t enc_delta;          // -128 ... 127
@@ -54,6 +55,15 @@ void rotary_setconfig(rotary_config_t* config)
 {
 	current_config = config;
 
+	if(!current_config || !current_config->leds_on)
+	{
+		set_rotarys_leds(0);
+	}
+	else
+	{
+		int32_t tmp = current_config->type==rotary_uint8?*current_config->data_u8:*current_config->data_u16;
+		calc_number_of_leds(tmp);
+	}
 }
 
 void rotary_process(void)
@@ -97,12 +107,28 @@ void rotary_process(void)
 			break;
 		}		
 
-		uint8_t number_of_leds = (32.0 / current_config->max-current_config->min+1) * (float)tmp;
-		set_rotarys_leds(number_of_leds);
-
-		if(current_config->change)
-			current_config->change();
+		if(current_config->leds_on)
+		{
+			calc_number_of_leds(tmp);
+		}
+		else
+		{
+			set_rotarys_leds(0);
+		}	
 	}
+}
+
+static void calc_number_of_leds(int32_t tmp)
+{
+	uint16_t divisor = (current_config->max-current_config->min+1);
+
+	if(divisor==0)
+		divisor=1;
+	uint8_t number_of_leds = (32.0 / (current_config->max-current_config->min+1)) * (float)tmp;
+	set_rotarys_leds(number_of_leds);
+
+	if(current_config->change)
+		current_config->change();
 }
 
 static int8_t encode_read( void )         // read single step encoders

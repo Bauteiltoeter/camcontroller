@@ -1,6 +1,8 @@
 #include "menu_hardware.h"
 #include "lcd.h"
 #include "adc.h"
+#include "hardware.h"
+#include <util/delay.h>
 
 void show_hardware_info(void)
 {
@@ -17,4 +19,28 @@ void show_hardware_info(void)
 	sprintf(line,"Y: %d", ADC_Read(1));
 	lcd_gotoxy(12,1);
 	lcd_puts(line);
+
+	static uint8_t i=0;
+	static uint8_t up=1;
+	
+	set_rotarys_leds(i);
+	
+	if(up)
+	{
+		i++;
+		if(i>31)
+		{
+			up=0;
+		}
+	}
+	else
+	{
+		i--;
+		if(i==0)
+		{
+			up=1;
+		}
+	}
+	
+
 }

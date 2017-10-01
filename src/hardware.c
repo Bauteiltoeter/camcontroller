@@ -1,5 +1,7 @@
 #include "hardware.h"
+#include "max7221.h"
 #include <avr/io.h>
+#include <util/delay.h>
 
 #define BUTTON_ROW_1 7 //change set_row if changed!!!
 #define BUTTON_ROW_2 6
@@ -37,6 +39,11 @@
 #define ROT_PUSH_DDR DDRE
 #define ROT_PUSH 4
 
+#define LED_CAMSEL_1 3,5
+#define LED_CAMSEL_2 7,5
+#define LED_CAMSEL_3 2,5
+#define LED_CAMSEL_4 4,5
+
 
 static uint8_t button_states[4];
 
@@ -50,6 +57,10 @@ void hardware_init(void)
 	hardware_tick();
 	hardware_tick();
 	hardware_tick();
+
+	max7221_init();
+
+
 }
 
 static void set_row(uint8_t row)
@@ -210,7 +221,7 @@ softkey_t get_softkeys(void)
 		if(old_rot==0)
 		{
 			old_rot=1;
-			return ROT;
+		//	return ROT;
 		}
 	}
 	else
@@ -218,7 +229,7 @@ softkey_t get_softkeys(void)
 		if(old_rot==1)
 		{
 			old_rot=0;
-			return ROT_R;
+		//	return ROT_R;
 		}
 	}
 
@@ -256,12 +267,47 @@ void reset_store_led(uint8_t led)
 
 void set_cam_leds(uint8_t active)
 {
-
+	switch(active)
+	{
+		case 0: max7221_set_led(LED_CAMSEL_1);
+				max7221_reset_led(LED_CAMSEL_2);
+				max7221_reset_led(LED_CAMSEL_3);
+				max7221_reset_led(LED_CAMSEL_4);
+		break;
+		case 1: max7221_reset_led(LED_CAMSEL_1);
+				max7221_set_led(LED_CAMSEL_2);
+				max7221_reset_led(LED_CAMSEL_3);
+				max7221_reset_led(LED_CAMSEL_4);
+		break;
+		case 2: max7221_reset_led(LED_CAMSEL_1);
+				max7221_reset_led(LED_CAMSEL_2);
+				max7221_set_led(LED_CAMSEL_3);
+				max7221_reset_led(LED_CAMSEL_4);
+		break;
+		case 3: max7221_reset_led(LED_CAMSEL_1);
+				max7221_reset_led(LED_CAMSEL_2);
+				max7221_reset_led(LED_CAMSEL_3);
+				max7221_set_led(LED_CAMSEL_4);
+		break;
+	}
 }
 
 void set_rotarys_leds(uint8_t number)
 {
+	static uint8_t cathodes[] = { 4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3};
+	static uint8_t anodes[]   = { 4,4,4,4,7,7,7,7,3,3,3,3,2,2,2,2,0,0,0,0,5,5,5,5,1,1,1,1,6,6,6,6};
 
+	uint8_t i=0;
+	for(i=0; i < number; i++)
+	{
+		max7221_set_ledbuffer(anodes[i],cathodes[i]);
+	}	
+	for(;i<32;i++)
+	{
+		max7221_reset_ledbuffer(anodes[i],cathodes[i]);
+	}
+
+	max7221_send_buffer();
 
 }
 
