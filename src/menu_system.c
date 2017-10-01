@@ -266,11 +266,11 @@ void set_menu(menu_identifiers menu)
 	lcd_gotoxy(0,3);
 	lcd_puts_p(menues[menu].lines[3]);
 
-	if(menues[menu].init)
-		menues[menu].init();
-
 	//NULL is also valid here, so no NULL check (disable rotary)
 	rotary_setconfig(menues[menu].rotary);
+
+	if(menues[menu].init)
+		menues[menu].init();
 
 	update_leds();
 

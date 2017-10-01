@@ -22,7 +22,7 @@
 #define CAMKEY_3 !(button_states[2]&(1<<CAMKEY_POS))
 #define CAMKEY_4 !(button_states[3]&(1<<CAMKEY_POS))
 
-#define STOREKEY_POS 0
+#define STOREKEY_POS 6
 #define STOREKEY_1 !(button_states[0]&(1<<STOREKEY_POS))
 #define STOREKEY_2 !(button_states[1]&(1<<STOREKEY_POS))
 #define STOREKEY_3 !(button_states[2]&(1<<STOREKEY_POS))
@@ -39,10 +39,15 @@
 #define ROT_PUSH_DDR DDRE
 #define ROT_PUSH 4
 
-#define LED_CAMSEL_1 3,5
+#define LED_CAMSEL_1 3,5  //anode,cathode
 #define LED_CAMSEL_2 7,5
 #define LED_CAMSEL_3 2,5
 #define LED_CAMSEL_4 4,5
+
+#define LED_STORE_1 3,6
+#define LED_STORE_2 7,6
+#define LED_STORE_3 2,6
+#define LED_STORE_4 4,6
 
 
 static uint8_t button_states[4];
@@ -221,7 +226,7 @@ softkey_t get_softkeys(void)
 		if(old_rot==0)
 		{
 			old_rot=1;
-		//	return ROT;
+			//return ROT;
 		}
 	}
 	else
@@ -229,7 +234,7 @@ softkey_t get_softkeys(void)
 		if(old_rot==1)
 		{
 			old_rot=0;
-		//	return ROT_R;
+			//return ROT_R;
 		}
 	}
 
@@ -257,12 +262,24 @@ rotselkey_t get_rotselkeys(void)
 
 void set_store_led(uint8_t led)
 {
-	
+	switch(led)
+	{
+		case 0: max7221_set_led(LED_STORE_1); break;
+		case 1: max7221_set_led(LED_STORE_2); break;
+		case 2: max7221_set_led(LED_STORE_3); break;
+		case 3: max7221_set_led(LED_STORE_4); break;
+	}
 }
 
 void reset_store_led(uint8_t led)
 {
-
+	switch(led)
+	{
+		case 0: max7221_reset_led(LED_STORE_1); break;
+		case 1: max7221_reset_led(LED_STORE_2); break;
+		case 2: max7221_reset_led(LED_STORE_3); break;
+		case 3: max7221_reset_led(LED_STORE_4); break;
+	}
 }
 
 void set_cam_leds(uint8_t active)
