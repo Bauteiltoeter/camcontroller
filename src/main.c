@@ -141,10 +141,10 @@ int main (void)
 		set_menu(MENU_SPLASH);
 	}
 
-	dmx_init();
+//	dmx_init();
 	ADC_Init();
 	rotary_init();
-
+//
 	send_switch();
 
 	set_cam_leds(active_cam);
@@ -157,7 +157,7 @@ int main (void)
 		blink_counter++;
 		loop++;
 
-		/*if(loop==10)
+		if(loop==10)
 		{  
 			blink_counter++;
 			if(active_menu != MENU_LOCKED)
@@ -187,7 +187,7 @@ int main (void)
 
 			
 			loop=0;
-		}*/
+		}
 		
 		hardware_tick();
 		rotary_tick();
