@@ -86,6 +86,11 @@ static const char MENU_HARDWARE_L2[] PROGMEM 		= "                    ";
 static const char MENU_HARDWARE_L3[] PROGMEM 		= "                    ";
 static const char MENU_HARDWARE_L4[] PROGMEM 		= "                BACK";
 
+static const char MENU_LED_BRIGHTNESS_L1[] PROGMEM  = "Setup               ";
+static const char MENU_LED_BRIGHTNESS_L2[] PROGMEM  = "                    ";
+static const char MENU_LED_BRIGHTNESS_L3[] PROGMEM  = "                    ";
+static const char MENU_LED_BRIGHTNESS_L4[] PROGMEM  = "UP  DOWN        BACK";
+
 //Define the menu structure
 __flash const menu_t menues[] =
 { 	
@@ -214,7 +219,16 @@ __flash const menu_t menues[] =
 		.init  = NULL,
 		.cyclic = show_hardware_info,
 		.rotary= NULL
-	}
+	} ,
+	{ //MENU_LED_BRIGHTNESS
+		.lines = { MENU_LED_BRIGHTNESS_L1,MENU_LED_BRIGHTNESS_L2,MENU_LED_BRIGHTNESS_L3,MENU_LED_BRIGHTNESS_L4},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
+		.cb    = { NULL,NULL,NULL,NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
+		.init  = NULL,
+		.cyclic = NULL,
+		.rotary= NULL
+	} 
 };
 
 menu_identifiers active_menu;

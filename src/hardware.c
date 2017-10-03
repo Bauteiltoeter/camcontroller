@@ -55,6 +55,7 @@ static uint8_t button_states[4];
 void hardware_init(void)
 {
 	BUTTON_COL_DDR = 0x00; //All input
+	BUTTON_COL_PORT= 0xFF; //All pullups
 	BUTTON_ROW_DDR &= ~((1<<BUTTON_ROW_1)|(1<<BUTTON_ROW_2)|(1<<BUTTON_ROW_3)|(1<<BUTTON_ROW_4));
 	ROT_PUSH_DDR &= ~(1<<ROT_PUSH);
 

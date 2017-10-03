@@ -21,6 +21,7 @@
 		MENU_LOCK_SETUP = 11,
 		MENU_ALL_POWER = 12,
 		MENU_HARDWARE = 13,
+		MENU_LED_BRIGHTNESS = 14,
 		MENU_INVALID = 255
 	} menu_identifiers;
 
