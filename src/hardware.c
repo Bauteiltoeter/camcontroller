@@ -227,7 +227,7 @@ softkey_t get_softkeys(void)
 		if(old_rot==0)
 		{
 			old_rot=1;
-			//return ROT;
+			return ROT;
 		}
 	}
 	else
@@ -235,7 +235,7 @@ softkey_t get_softkeys(void)
 		if(old_rot==1)
 		{
 			old_rot=0;
-			//return ROT_R;
+			return ROT_R;
 		}
 	}
 

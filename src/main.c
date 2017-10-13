@@ -145,7 +145,7 @@ int main (void)
 		set_menu(MENU_SPLASH);
 	}
 
-//	dmx_init();
+	dmx_init();
 	ADC_Init();
 	rotary_init();
 //
