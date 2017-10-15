@@ -24,7 +24,7 @@ static const char MENU_SPLASH_L4[] PROGMEM			= "                2017";
 static const char MENU_MAIN_L1[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L2[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L3[] PROGMEM			= "                    ";
-static const char MENU_MAIN_L4[] PROGMEM			= "STORE          SETUP";
+static const char MENU_MAIN_L4[] PROGMEM			= "STORE           MENU";
 
 static const char MENU_SETUP_L1[] PROGMEM			= "Select cam          ";
 static const char MENU_SETUP_L2[] PROGMEM			= "                    ";
@@ -46,7 +46,7 @@ static const char MENU_CLEAR_L2[] PROGMEM			= "Choose store        ";
 static const char MENU_CLEAR_L3[] PROGMEM			= "                    ";
 static const char MENU_CLEAR_L4[] PROGMEM			= "ALL            ABORT";
 
-static const char MENU_GENERAL_SETUP_L1[] PROGMEM	= "Choose setup menu   ";
+static const char MENU_GENERAL_SETUP_L1[] PROGMEM	= "Choose menu option  ";
 static const char MENU_GENERAL_SETUP_L2[] PROGMEM	= "                    ";
 static const char MENU_GENERAL_SETUP_L3[] PROGMEM	= "                    ";
 static const char MENU_GENERAL_SETUP_L4[] PROGMEM	= "PREV NEXT ENTER BACK";

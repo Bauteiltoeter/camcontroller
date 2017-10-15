@@ -140,7 +140,7 @@ int main (void)
 	}
 	else
 	{
-		if(lock_active==255)
+		if(lock_active==255 || get_cam1_key())
 			unlock_system();
 		set_menu(MENU_SPLASH);
 	}
@@ -152,8 +152,20 @@ int main (void)
 	send_switch();
 
 	set_cam_leds(active_cam);
-	uint16_t blink_counter=0;
 
+	for(uint8_t i=0; i < CAM_COUNT; i++)
+	{
+		if(cams[i].cam_active)
+		{
+			write_dmx(cams[i].base_addr + cams[i].pan_address, cams[i].pan);
+			write_dmx(cams[i].base_addr + cams[i].tilt_address, cams[i].tilt);
+			write_dmx(cams[i].base_addr + cams[i].speed_address, cams[i].speed);
+			send_switch_state(i);
+		}
+	}
+
+
+	uint16_t blink_counter=0;
 	uint8_t loop=0;
 
 	while(1)
