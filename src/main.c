@@ -43,7 +43,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 {
 	{
 		.cam_active = 1,
-		.base_addr = 0,
+		.base_addr = 1,
 		.pan_address = 0,
 		.tilt_address = 2,
 		.speed_address = 4,
@@ -62,7 +62,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 	},	
 	{
 		.cam_active = 1,
-		.base_addr = 16,
+		.base_addr = 17,
 		.pan_address = 0,
 		.tilt_address = 2,
 		.speed_address = 4,
@@ -81,7 +81,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 	},
 	{
 		.cam_active = 1,
-		.base_addr = 32,
+		.base_addr = 33,
 		.pan_address = 0,
 		.tilt_address = 2,
 		.speed_address = 4,
@@ -157,9 +157,9 @@ int main (void)
 	{
 		if(cams[i].cam_active)
 		{
-			write_dmx(cams[i].base_addr + cams[i].pan_address, cams[i].pan);
-			write_dmx(cams[i].base_addr + cams[i].tilt_address, cams[i].tilt);
-			write_dmx(cams[i].base_addr + cams[i].speed_address, cams[i].speed);
+			write_dmx(cams[i].base_addr-1 + cams[i].pan_address, cams[i].pan);
+			write_dmx(cams[i].base_addr-1 + cams[i].tilt_address, cams[i].tilt);
+			write_dmx(cams[i].base_addr-1 + cams[i].speed_address, cams[i].speed);
 			send_switch_state(i);
 		}
 	}
@@ -350,9 +350,9 @@ void process_inputs(void)
 	//if tilt or pan changed
 	
 	//write values to DMX
-	write_dmx(cams[active_cam].base_addr + cams[active_cam].pan_address, cams[active_cam].pan);
-	write_dmx(cams[active_cam].base_addr + cams[active_cam].tilt_address, cams[active_cam].tilt);
-	write_dmx(cams[active_cam].base_addr + cams[active_cam].speed_address, cams[active_cam].speed);
+	write_dmx(cams[active_cam].base_addr-1 + cams[active_cam].pan_address, cams[active_cam].pan);
+	write_dmx(cams[active_cam].base_addr-1 + cams[active_cam].tilt_address, cams[active_cam].tilt);
+	write_dmx(cams[active_cam].base_addr-1 + cams[active_cam].speed_address, cams[active_cam].speed);
 
 	//update main menu
 	if(old_tilt != cams[active_cam].tilt || old_pan != cams[active_cam].pan)
@@ -417,6 +417,6 @@ void send_switch_state(uint8_t cam)
 		dmx=255;
 
 
-	write_dmx(cams[cam].base_addr + cams[cam].switch_address, dmx);
+	write_dmx(cams[cam].base_addr-1 + cams[cam].switch_address, dmx);
 }
 
