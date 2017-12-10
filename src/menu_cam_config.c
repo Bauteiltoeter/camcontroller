@@ -2,13 +2,13 @@
 #include "globals.h"
 #include "lcd.h"
 #include "rotary.h"
+#include "hardware.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
 
 
-uint8_t setup_active_cam=0;
 uint8_t param_id=0;
 
 
@@ -107,27 +107,28 @@ void setup_show_cam(void)
 	lcd_gotoxy(0,1);
 
 	char tmp[10];
-	itoa(setup_active_cam+1,tmp,10);
+	itoa(active_cam+1,tmp,10);
 	lcd_puts("Edit Cam ");
 	lcd_gotoxy(9,1);
 	lcd_puts(tmp);
+	set_cam_leds(active_cam);
 }
 
 void setup_cam_up(void)
 {
-	setup_active_cam++;
+	active_cam++;
 
-	if(setup_active_cam>= CAM_COUNT)
-		setup_active_cam=0;
+	if(active_cam>= CAM_COUNT)
+		active_cam=0;
 
 	setup_show_cam();
 }
 
 void setup_cam_down(void)
 {
-	setup_active_cam--;
-	if(setup_active_cam>= CAM_COUNT)
-		setup_active_cam= CAM_COUNT-1;
+	active_cam--;
+	if(active_cam>= CAM_COUNT)
+		active_cam= CAM_COUNT-1;
 
 	setup_show_cam();
 }
@@ -147,13 +148,13 @@ void param_up(void)
 {
 	switch(cam_setup_parameters[param_id].type)
 	{
-		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))++; 
-						 if(*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-							*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
+		case type_uint16:  (*(uint16_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset))++; 
+						 if(*(uint16_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+							*(uint16_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
 		break;
-		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))++; 
-					    if(*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-						   *(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
+		case type_uint8:  (*(uint8_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset))++; 
+					    if(*(uint8_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+						   *(uint8_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
 		break;
 	}
 	param_show();	
@@ -163,13 +164,13 @@ void param_down(void)
 {
 	switch(cam_setup_parameters[param_id].type)
 	{
-		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))--; 
-						 if(*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-							*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
+		case type_uint16:  (*(uint16_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset))--; 
+						 if(*(uint16_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+							*(uint16_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
 		break;
-		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))--; 
-					    if(*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-						   *(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
+		case type_uint8:  (*(uint8_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset))--; 
+					    if(*(uint8_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+						   *(uint8_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
 		break;
 	}
 	param_show();	
@@ -191,12 +192,12 @@ void param_show(void)
 
 	if(cam_setup_parameters[param_id].type == type_uint16)
 	{
-		rotary_param_conf.data_u16 = ((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset;
+		rotary_param_conf.data_u16 = ((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset;
 		rotary_param_conf.type = rotary_uint16;
 	}	
 	else if(cam_setup_parameters[param_id].type == type_uint8)
 	{
-		rotary_param_conf.data_u8 = ((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset;
+		rotary_param_conf.data_u8 = ((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset;
 		rotary_param_conf.type = rotary_uint8;
 	}
 
@@ -209,7 +210,7 @@ void param_show(void)
 	lcd_gotoxy(14,0);
 	lcd_puts("CAM ");
 	char tmp[10];
-	itoa(setup_active_cam+1,tmp,10);
+	itoa(active_cam+1,tmp,10);
 	lcd_gotoxy(18,0);
 	lcd_puts(tmp);
 
@@ -218,8 +219,8 @@ void param_show(void)
 
 	switch(cam_setup_parameters[param_id].type)
 	{
-		case type_uint16: itoa( *(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
-		case type_uint8: itoa( *(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
+		case type_uint16: itoa( *(uint16_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
+		case type_uint8: itoa( *(uint8_t*)(((void*)&cams[active_cam]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
 	}
 
 
