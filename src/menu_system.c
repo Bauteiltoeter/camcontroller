@@ -34,7 +34,7 @@ static const char MENU_SETUP_L4[] PROGMEM			= "PREV NEXT ENTER BACK";
 static const char MENU_EDIT_CAM_L1[] PROGMEM		= "Enter parameter     ";
 static const char MENU_EDIT_CAM_L2[] PROGMEM		= "                    ";
 static const char MENU_EDIT_CAM_L3[] PROGMEM		= "                    ";
-static const char MENU_EDIT_CAM_L4[] PROGMEM		= "NEXT UP   DOWN  BACK";
+static const char MENU_EDIT_CAM_L4[] PROGMEM		= "DOWN UP   NEXT  BACK";
 
 static const char MENU_STORE_L1[] PROGMEM			= "Store               ";
 static const char MENU_STORE_L2[] PROGMEM			= "Choose store to save";
@@ -124,7 +124,7 @@ __flash const menu_t menues[] =
 	{ //MENU_EDIT_CAM
 		.lines = { MENU_EDIT_CAM_L1,MENU_EDIT_CAM_L2,MENU_EDIT_CAM_L3,MENU_EDIT_CAM_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_SETUP,MENU_SETUP},
-		.cb    = { param_next,param_up, param_down, NULL,NULL},
+		.cb    = { param_down,param_up, param_next, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = param_show,
 		.cyclic = NULL,
