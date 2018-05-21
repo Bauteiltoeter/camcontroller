@@ -16,6 +16,7 @@
 #include "menu_lock.h"
 #include "menu_cam_ctrl.h"
 #include "globals.h"
+#include "cccb.h"
 
 
 
@@ -99,7 +100,7 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.power_state = 1 
 	},
 	{
-		.cam_active = 0,
+        .cam_active = 1,
 		.base_addr = 0xFFFF,
 		.pan_address = 0xFFFF,
 		.tilt_address = 0xFFFF,
@@ -115,7 +116,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.button_state = 0,
-		.power_state = 1 
+        .power_state = 1,
+        .focus = 500,
+        .iris=0
 	} 
 };
 
@@ -146,6 +149,7 @@ int main (void)
 	}
 
 	dmx_init();
+    cccb_init();
 	ADC_Init();
 	rotary_init();
 //
@@ -199,14 +203,17 @@ int main (void)
 				for(int i=0; i < STORE_COUNT; i++)
 					set_store_led(i);
 			}
-	
 
 			
 			loop=0;
+              cccb_run();
 		}
 		
+
+
 		hardware_tick();
 		rotary_tick();
+
 		//awkward delay here.. should be replaced by a timer. But it works, DMX is interrupt-driven
 		_delay_ms(0.5);
 	}
@@ -240,7 +247,7 @@ void process_inputs(void)
 
 
 
-	//Change the active cam
+    //Change the activ  e cam
 	switch(keys)
 	{
 		case CAM1: active_cam = cams[0].cam_active ? 0 : active_cam; break;
@@ -257,6 +264,10 @@ void process_inputs(void)
 		set_cam_leds(active_cam);
 
 		update_leds();
+
+
+        active_rotary_funtion=0;
+        set_fsel_leds(0 );
 		
 
 		//main screen
@@ -306,7 +317,7 @@ void process_inputs(void)
 	//fetch store key selection from hardware
 	storekey_t store = get_storekeys();
 
-	if(store != STORE_NO_KEY)
+    if(store != STORE_NO_KEY)
 	{
 		uint8_t store_id=0;
 
@@ -361,13 +372,31 @@ void process_inputs(void)
 			main_show();
 	}
 
-	rotselkey_t rotsel = get_rotselkeys();
+    fselkey_t fsel = get_fselkeys();
 
-	if(rotsel != ROTSEL_NO_KEY)
+    if(fsel != FSEL_NO_KEY)
 	{
+        if(active_cam!=3)
+        {
+            set_fsel_leds(0);
+            active_rotary_funtion=0;
+        }
+        else
+        {
+            switch(fsel)
+            {
+            case FSEL1: active_rotary_funtion=0; break;
+            case FSEL2: active_rotary_funtion=1; break;
+            case FSEL3: active_rotary_funtion=2; break;
+            case FSEL4: active_rotary_funtion=3; break;
+            }
 
+            set_fsel_leds(fsel);
+        }
 
-		
+        if(active_menu==MENU_MAIN)
+            main_init();
+
 	}
 }
 

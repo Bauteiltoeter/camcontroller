@@ -6,6 +6,7 @@
 #include "menu_cam_ctrl.h"
 #include "menu_all_power.h"
 #include "menu_hardware.h"
+#include "menu_bmmcc.h"
 #include "lcd.h"
 #include "hardware.h"
 
@@ -16,10 +17,10 @@ extern void load_default(void);
 extern void update_leds(void);
 extern void lock_system(void); 
 
-static const char MENU_SPLASH_L1[] PROGMEM			= "DragonVideo         ";
-static const char MENU_SPLASH_L2[] PROGMEM			= "By Karrn            ";
-static const char MENU_SPLASH_L3[] PROGMEM			= "Cam controller      ";
-static const char MENU_SPLASH_L4[] PROGMEM			= "                2017";
+static const char MENU_SPLASH_L1[] PROGMEM			= "StreamingFurs       ";
+static const char MENU_SPLASH_L2[] PROGMEM			= "CaracalCamController";
+static const char MENU_SPLASH_L3[] PROGMEM			= "By Karrn            ";
+static const char MENU_SPLASH_L4[] PROGMEM			= "                2018";
 
 static const char MENU_MAIN_L1[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L2[] PROGMEM			= "                    ";
@@ -90,6 +91,12 @@ static const char MENU_LED_BRIGHTNESS_L1[] PROGMEM  = "Setup               ";
 static const char MENU_LED_BRIGHTNESS_L2[] PROGMEM  = "                    ";
 static const char MENU_LED_BRIGHTNESS_L3[] PROGMEM  = "                    ";
 static const char MENU_LED_BRIGHTNESS_L4[] PROGMEM  = "UP  DOWN        BACK";
+
+
+static const char MENU_BMMCC_L1[] PROGMEM  = "BMMCC setup         ";
+static const char MENU_BMMCC_L2[] PROGMEM  = "                    ";
+static const char MENU_BMMCC_L3[] PROGMEM  = "                    ";
+static const char MENU_BMMCC_L4[] PROGMEM  = "DOWN UP   NEXT  BACK";
 
 //Define the menu structure
 __flash const menu_t menues[] =
@@ -228,7 +235,16 @@ __flash const menu_t menues[] =
 		.init  = NULL,
 		.cyclic = NULL,
 		.rotary= NULL
-	} 
+	}  ,
+    { //MENU_BMMCC
+        .lines = { MENU_BMMCC_L1,MENU_BMMCC_L2,MENU_BMMCC_L3,MENU_BMMCC_L4},
+        .next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
+        .cb    = { menu_bmmcc_down,menu_bmmcc_up,menu_bmmcc_next,NULL,NULL},
+        .cb_r=   { NULL,NULL,NULL,NULL,NULL},
+        .init  = menu_bmmcc_init,
+        .cyclic = NULL,
+        .rotary= NULL
+    }
 };
 
 menu_identifiers active_menu;
