@@ -40,6 +40,7 @@ typedef struct  {
 	uint16_t store_tilt[STORE_COUNT]; //!< Position stores for tilt
     uint16_t focus;
     uint8_t iris;
+    int8_t zoom;
 } cam_data_t;
 
 extern cam_data_t cams[CAM_COUNT];	//!< global array to store the configuration data for each cam

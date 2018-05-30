@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static uint8_t zoom_tmp;
+
 void main_init(void)
 {
 	static rotary_config_t rotary_speed_config = 
@@ -33,7 +35,7 @@ void main_init(void)
 
     static rotary_config_t rotary_iris_config =
         {
-            .data_u16 = &cams[0].iris,
+            .data_u8 = &cams[0].iris,
             .type = rotary_uint8,
             .min = 0,
             .max = 22,
@@ -42,6 +44,19 @@ void main_init(void)
             .wrap = 0,
             .leds_on = 1
         };
+
+    static rotary_config_t rotary_zoom_config =
+        {
+            .data_u8 = &zoom_tmp,
+            .type = rotary_uint8,
+            .min = 0,
+            .max = 255,
+            .change = NULL,
+            .multi = 1,
+            .wrap = 0,
+            .leds_on = 0
+        };
+
 
 
 
@@ -52,6 +67,7 @@ void main_init(void)
             rotary_setconfig(&rotary_speed_config); break;
     case 1: rotary_focus_config.data_u16 = &cams[active_cam].focus;
             rotary_setconfig(&rotary_focus_config); break;
+    case 2: rotary_setconfig(&rotary_zoom_config); break;
     case 3: rotary_iris_config.data_u8 = &cams[active_cam].iris;
             rotary_setconfig(&rotary_iris_config); break;
     }
@@ -133,3 +149,27 @@ void main_show(void)
 
 
 }	
+
+void main_run(void)
+{
+    static uint8_t i;
+
+    if(i==20)
+     {
+    char tmp[20];
+    if(active_rotary_funtion==2)
+    {
+
+        cams[active_cam].zoom = (int8_t)((int8_t)zoom_tmp-(int8_t)127)*8;
+
+        lcd_gotoxy(5,2);
+        sprintf(tmp,"%d     ",cams[active_cam].zoom);
+        lcd_puts(tmp);
+    }
+
+    zoom_tmp=127;
+    i=0;
+    }
+
+    i++;
+}

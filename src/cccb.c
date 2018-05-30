@@ -31,7 +31,10 @@ void cccb_run()
     uart3_putc(bmmcc_request_wb);
     uart3_putc(bmmcc_request_sa);
     uart3_putc(bmmcc_request_iso);
-    uart3_putc(0); //zoom
+
+
+
+    uart3_putc( *((uint8_t*)&cams[3].zoom)); //zoom
 
     bmmcc_request_sa=0;
     bmmcc_request_wb=0;

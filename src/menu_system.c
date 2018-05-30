@@ -116,7 +116,7 @@ __flash const menu_t menues[] =
 		.cb    = { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = main_init,
-		.cyclic = NULL,
+        .cyclic = main_run,
 		.rotary= NULL //the main menu uses the rotary encoder, but it's initialised in the main_init
 	},
 	{ //MENU_SETUP
