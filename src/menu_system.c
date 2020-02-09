@@ -7,6 +7,7 @@
 #include "menu_all_power.h"
 #include "menu_hardware.h"
 #include "menu_bmmcc.h"
+#include "menu_tally.h"
 #include "lcd.h"
 #include "hardware.h"
 
@@ -25,7 +26,7 @@ static const char MENU_SPLASH_L4[] PROGMEM			= "                2018";
 static const char MENU_MAIN_L1[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L2[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L3[] PROGMEM			= "                    ";
-static const char MENU_MAIN_L4[] PROGMEM			= "STORE           MENU";
+static const char MENU_MAIN_L4[] PROGMEM			= "STORE    TALLY  MENU";
 
 static const char MENU_SETUP_L1[] PROGMEM			= "Select cam          ";
 static const char MENU_SETUP_L2[] PROGMEM			= "                    ";
@@ -98,6 +99,12 @@ static const char MENU_BMMCC_L2[] PROGMEM  = "                    ";
 static const char MENU_BMMCC_L3[] PROGMEM  = "                    ";
 static const char MENU_BMMCC_L4[] PROGMEM  = "DOWN UP   NEXT  BACK";
 
+static const char MENU_TALLY_L1[] PROGMEM  = "Send tally info     ";
+static const char MENU_TALLY_L2[] PROGMEM  = "No connection info  ";
+static const char MENU_TALLY_L3[] PROGMEM  = "                    ";
+static const char MENU_TALLY_L4[] PROGMEM  = "AUTO YELOW BLUE BACK";
+
+
 //Define the menu structure
 __flash const menu_t menues[] =
 { 	
@@ -112,7 +119,7 @@ __flash const menu_t menues[] =
     },
 	{ //MENU_MAIN
 		.lines = { MENU_MAIN_L1,MENU_MAIN_L2,MENU_MAIN_L3,MENU_MAIN_L4},
-		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
+		.next  = { MENU_STORE, MENU_INVALID,MENU_TALLY,MENU_GENERAL_SETUP,MENU_INVALID},
 		.cb    = { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = main_init,
@@ -242,6 +249,15 @@ __flash const menu_t menues[] =
         .cb    = { menu_bmmcc_down,menu_bmmcc_up,menu_bmmcc_next,NULL,NULL},
         .cb_r=   { NULL,NULL,NULL,NULL,NULL},
         .init  = menu_bmmcc_init,
+        .cyclic = NULL,
+        .rotary= NULL
+    } ,
+    { //MENU_TALLY
+        .lines = { MENU_TALLY_L1,MENU_TALLY_L2,MENU_TALLY_L3,MENU_TALLY_L4},
+        .next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+        .cb    = { menu_tally_auto,menu_tally_yellow,menu_tally_blue,NULL,NULL},
+        .cb_r=   { NULL,NULL,NULL,NULL,NULL},
+        .init  = menu_tally_init,
         .cyclic = NULL,
         .rotary= NULL
     }

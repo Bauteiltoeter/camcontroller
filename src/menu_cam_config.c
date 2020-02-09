@@ -98,6 +98,13 @@ const __flash cam_setup_parameters_t cam_setup_parameters[] =
 		.offset = offsetof(cam_data_t, tilt_scaling),
 		.min = 0,
 		.max = 100
+	},
+	{
+		.name = "lockout movement    ",
+		.type = type_uint8,
+		.offset = offsetof(cam_data_t, lockMove),
+		.min = 0,
+		.max = 1
 	}
 };
 

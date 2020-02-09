@@ -59,7 +59,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.button_state = 0,
-		.power_state = 1
+		.power_state = 1,
+		.tally = 0,
+		.lockMove = 1
 	},	
 	{
 		.cam_active = 1,
@@ -78,7 +80,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.button_state = 0,
-		.power_state = 1 
+		.power_state = 1,
+		.tally = 0,
+		.lockMove = 1
 	},
 	{
 		.cam_active = 1,
@@ -97,7 +101,10 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		.button_state = 0,
-		.power_state = 1 
+		.power_state = 1,
+		.tally = 0,
+		.lockMove = 1
+
 	},
 	{
         .cam_active = 1,
@@ -118,7 +125,8 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.button_state = 0,
         .power_state = 1,
         .focus = 500,
-        .iris=0
+        .iris=0,
+		.tally=0
 	} 
 };
 
@@ -152,6 +160,8 @@ int main (void)
     cccb_init();
 	ADC_Init();
 	rotary_init();
+	tally_init();
+	artnet_init();
 //
 	send_switch();
 
@@ -213,6 +223,8 @@ int main (void)
 
 		hardware_tick();
 		rotary_tick();
+		tally_tick();
+		artnet_tick();
 
 		//awkward delay here.. should be replaced by a timer. But it works, DMX is interrupt-driven
 		_delay_ms(0.5);
@@ -240,7 +252,7 @@ void update_leds(void)
 }
 
 
-void process_inputs(void)
+void 	process_inputs(void)
 {
 	//Fetch keypress from hardware
 	camkey_t keys = get_camkeys();
@@ -285,33 +297,38 @@ void process_inputs(void)
 	if(analog%8==0)
 	{
 		//fetch joystick deflection and calculate new pan
-		int16_t diff = axis_offset(0, cams[active_cam].pan_scaling);
-		if(cams[active_cam].pan_invert)
+
+		if(cams[active_cam].lockMove==0 || cams[active_cam].tally !=  1 )
 		{
-			diff=-diff;
+
+			int16_t diff = axis_offset(0, cams[active_cam].pan_scaling);
+			if(cams[active_cam].pan_invert)
+			{
+				diff=-diff;
+			}
+		
+			if( (int16_t)cams[active_cam].pan+diff > 255)
+				cams[active_cam].pan=255;
+			else if( (int16_t)cams[active_cam].pan+diff < 0)
+				cams[active_cam].pan=0;
+			else
+				cams[active_cam].pan+=diff	;
+
+			//fetch joystick deflection and calculate new tilt
+			diff = -axis_offset(1, cams[active_cam].tilt_scaling);
+			if(cams[active_cam].tilt_invert)
+			{
+				diff=-diff;
+			}
+
+
+			if( (int16_t)cams[active_cam].tilt+diff > 255)
+				cams[active_cam].tilt=255;
+			else if( (int16_t)cams[active_cam].tilt+diff < 0)
+				cams[active_cam].tilt=0;
+			else
+				cams[active_cam].tilt+=diff	;
 		}
-	
-		if( (int16_t)cams[active_cam].pan+diff > 255)
-			cams[active_cam].pan=255;
-		else if( (int16_t)cams[active_cam].pan+diff < 0)
-			cams[active_cam].pan=0;
-		else
-			cams[active_cam].pan+=diff	;
-
-		//fetch joystick deflection and calculate new tilt
-		diff = -axis_offset(1, cams[active_cam].tilt_scaling);
-		if(cams[active_cam].tilt_invert)
-		{
-			diff=-diff;
-		}
-
-
-		if( (int16_t)cams[active_cam].tilt+diff > 255)
-			cams[active_cam].tilt=255;
-		else if( (int16_t)cams[active_cam].tilt+diff < 0)
-			cams[active_cam].tilt=0;
-		else
-			cams[active_cam].tilt+=diff	;
 	}
 
 	//fetch store key selection from hardware

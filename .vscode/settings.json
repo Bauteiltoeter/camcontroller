@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "uart.h": "c",
+        "dmx.h": "c",
+        "optional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "system_error": "c",
+        "array": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
+    }
+}

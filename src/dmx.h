@@ -9,4 +9,7 @@
 void write_dmx(uint16_t channel, uint8_t value);
 void dmx_init(void);	
 
+
+extern volatile unsigned char dmx_buffer[512];
+
 #endif

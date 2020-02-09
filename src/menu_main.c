@@ -28,7 +28,7 @@ void main_init(void)
             .min = 190,
             .max = 1800,
             .change = main_show,
-            .multi = 5,
+            .multi = 1,
             .wrap = 0,
             .leds_on = 1
         };
@@ -87,6 +87,21 @@ void main_show(void)
 	itoa(active_cam+1,tmp,10);
 	lcd_gotoxy(12,0);
 	lcd_puts(tmp);
+
+    lcd_gotoxy(15,0);
+
+    if(cams[active_cam].tally==1)
+    {
+        lcd_puts("PGM ");
+    } 
+    else if(cams[active_cam].tally==2)
+    {
+        lcd_puts("PREV");
+    }
+    else
+    {
+        lcd_puts("    ");
+    }
 
 	lcd_gotoxy(0,1);
 	sprintf(tmp,"Pan: %3d Tilt: %3d", cams[active_cam].pan, cams[active_cam].tilt);
@@ -165,6 +180,21 @@ void main_run(void)
         lcd_gotoxy(5,2);
         sprintf(tmp,"%d     ",cams[active_cam].zoom);
         lcd_puts(tmp);
+    }
+
+        lcd_gotoxy(15,0);
+
+    if(cams[active_cam].tally==1)
+    {
+        lcd_puts("PGM ");
+    } 
+    else if(cams[active_cam].tally==2)
+    {
+        lcd_puts("PREV");
+    }
+    else
+    {
+        lcd_puts("    ");
     }
 
     zoom_tmp=127;

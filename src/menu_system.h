@@ -23,6 +23,7 @@
 		MENU_HARDWARE = 13,
 		MENU_LED_BRIGHTNESS = 14,
         MENU_BMMCC = 15,
+		MENU_TALLY = 16,
 		MENU_INVALID = 255
 	} menu_identifiers;
 

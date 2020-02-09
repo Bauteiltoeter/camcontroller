@@ -41,6 +41,8 @@ typedef struct  {
     uint16_t focus;
     uint8_t iris;
     int8_t zoom;
+	uint8_t tally;
+	uint8_t lockMove;
 } cam_data_t;
 
 extern cam_data_t cams[CAM_COUNT];	//!< global array to store the configuration data for each cam
