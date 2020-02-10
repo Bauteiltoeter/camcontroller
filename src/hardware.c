@@ -23,10 +23,10 @@
 #define CAMKEY_4 !(button_states[3]&(1<<CAMKEY_POS))
 
 #define STOREKEY_POS 6
-#define STOREKEY_1 !(button_states[0]&(1<<STOREKEY_POS))
-#define STOREKEY_2 !(button_states[1]&(1<<STOREKEY_POS))
-#define STOREKEY_3 !(button_states[2]&(1<<STOREKEY_POS))
-#define STOREKEY_4 !(button_states[3]&(1<<STOREKEY_POS))
+#define FSELKEY_5 !(button_states[0]&(1<<STOREKEY_POS))
+#define FSELKEY_6 !(button_states[1]&(1<<STOREKEY_POS))
+#define FSELKEY_7 !(button_states[2]&(1<<STOREKEY_POS))
+#define FSELKEY_8 !(button_states[3]&(1<<STOREKEY_POS))
 
 #define SOFTKEY_POS 0
 #define SOFTKEY_1 !(button_states[0]&(1<<SOFTKEY_POS))
@@ -50,15 +50,16 @@
 #define LED_CAMSEL_3 2,5
 #define LED_CAMSEL_4 4,5
 
-#define LED_STORE_1 3,6
-#define LED_STORE_2 7,6
-#define LED_STORE_3 2,6
-#define LED_STORE_4 4,6
+
 
 #define LED_FSEL_1 3,7
 #define LED_FSEL_2 7,7
 #define LED_FSEL_3 2,7
 #define LED_FSEL_4 4,7
+#define LED_FSEL_5 3,6
+#define LED_FSEL_6 7,6
+#define LED_FSEL_7 2,6
+#define LED_FSEL_8 4,6
 
 static uint8_t button_states[4];
 
@@ -118,7 +119,7 @@ void hardware_tick(void)
 	
 }
 
-camkey_t get_camkeys(void)
+fixturekey_t get_camkeys(void)
 {	
 	static uint8_t old_k1=0;
 //static uint8_t old_k2=0;
@@ -131,7 +132,7 @@ camkey_t get_camkeys(void)
 		if(old_k1==0)
 		{
 			old_k1=1;
-			return CAM1;
+			return FIX1;
 		}
 	}
 	else
@@ -140,17 +141,12 @@ camkey_t get_camkeys(void)
 	}
 
 	if(CAMKEY_2)
-		return CAM2;
+		return FIX2;
 	if(CAMKEY_3)
-		return CAM3;
+		return FIX3;
 	if(CAMKEY_4)
-		return CAM4;
-	return CAM_NO_KEY;
-}
-
-uint8_t get_cam1_key(void)
-{
-	return CAMKEY_1;
+		return FIX4;
+	return FIX_NO_KEY;
 }
 
 softkey_t get_softkeys(void)
@@ -252,20 +248,6 @@ softkey_t get_softkeys(void)
 	return NO_KEY;
 }
 
-storekey_t get_storekeys(void)
-{	
-
-	if( STOREKEY_1)
-		return STORE1;
-	if( STOREKEY_2)
-		return STORE2;
-	if( STOREKEY_3)
-		return STORE3;
-	if( STOREKEY_4)
-		return STORE4;
-	return STORE_NO_KEY;
-}
-
 fselkey_t get_fselkeys(void)
 {
     if( FSELKEY_1)
@@ -276,32 +258,19 @@ fselkey_t get_fselkeys(void)
         return FSEL3;
     if( FSELKEY_4)
         return FSEL4;
+	if( FSELKEY_5)
+		return FSEL5;
+	if( FSELKEY_6)
+		return FSEL6;
+	if( FSELKEY_7)
+		return FSEL7;
+	if( FSELKEY_8)
+		return FSEL8;
+
     return FSEL_NO_KEY;
 }
 
-void set_store_led(uint8_t led)
-{
-	switch(led)
-	{
-		case 0: max7221_set_led(LED_STORE_1); break;
-		case 1: max7221_set_led(LED_STORE_2); break;
-		case 2: max7221_set_led(LED_STORE_3); break;
-		case 3: max7221_set_led(LED_STORE_4); break;
-	}
-}
-
-void reset_store_led(uint8_t led)
-{
-	switch(led)
-	{
-		case 0: max7221_reset_led(LED_STORE_1); break;
-		case 1: max7221_reset_led(LED_STORE_2); break;
-		case 2: max7221_reset_led(LED_STORE_3); break;
-		case 3: max7221_reset_led(LED_STORE_4); break;
-	}
-}
-
-void set_cam_leds(uint8_t active)
+void set_fixture_leds(uint8_t active)
 {
 	switch(active)
 	{
@@ -356,27 +325,80 @@ uint8_t get_matrix_line(uint8_t line)
 
 void set_fsel_leds(uint8_t function)
 {
+	function--;
     switch(function)
     {
         case 0: max7221_set_led(LED_FSEL_1);
                 max7221_reset_led(LED_FSEL_2);
                 max7221_reset_led(LED_FSEL_3);
                 max7221_reset_led(LED_FSEL_4);
+				max7221_reset_led(LED_FSEL_5);
+				max7221_reset_led(LED_FSEL_6);
+				max7221_reset_led(LED_FSEL_7);
+				max7221_reset_led(LED_FSEL_8);
         break;
         case 1: max7221_reset_led(LED_FSEL_1);
                 max7221_set_led(LED_FSEL_2);
                 max7221_reset_led(LED_FSEL_3);
                 max7221_reset_led(LED_FSEL_4);
+				max7221_reset_led(LED_FSEL_5);
+				max7221_reset_led(LED_FSEL_6);
+				max7221_reset_led(LED_FSEL_7);
+				max7221_reset_led(LED_FSEL_8);
         break;
         case 2: max7221_reset_led(LED_FSEL_1);
                 max7221_reset_led(LED_FSEL_2);
                 max7221_set_led(LED_FSEL_3);
                 max7221_reset_led(LED_FSEL_4);
+				max7221_reset_led(LED_FSEL_5);
+				max7221_reset_led(LED_FSEL_6);
+				max7221_reset_led(LED_FSEL_7);
+				max7221_reset_led(LED_FSEL_8);
         break;
         case 3: max7221_reset_led(LED_FSEL_1);
                 max7221_reset_led(LED_FSEL_2);
                 max7221_reset_led(LED_FSEL_3);
                 max7221_set_led(LED_FSEL_4);
+				max7221_reset_led(LED_FSEL_5);
+				max7221_reset_led(LED_FSEL_6);
+				max7221_reset_led(LED_FSEL_7);
+				max7221_reset_led(LED_FSEL_8);
+		break;
+		case 4: max7221_reset_led(LED_FSEL_1);
+                max7221_reset_led(LED_FSEL_2);
+                max7221_reset_led(LED_FSEL_3);
+                max7221_reset_led(LED_FSEL_4);
+				max7221_set_led(LED_FSEL_5);
+				max7221_reset_led(LED_FSEL_6);
+				max7221_reset_led(LED_FSEL_7);
+				max7221_reset_led(LED_FSEL_8);
+		break;
+		case 5: max7221_reset_led(LED_FSEL_1);
+                max7221_reset_led(LED_FSEL_2);
+                max7221_reset_led(LED_FSEL_3);
+                max7221_reset_led(LED_FSEL_4);
+				max7221_reset_led(LED_FSEL_5);
+				max7221_set_led(LED_FSEL_6);
+				max7221_reset_led(LED_FSEL_7);
+				max7221_reset_led(LED_FSEL_8);
+		break;
+		case 6: max7221_reset_led(LED_FSEL_1);
+                max7221_reset_led(LED_FSEL_2);
+                max7221_reset_led(LED_FSEL_3);
+                max7221_reset_led(LED_FSEL_4);
+				max7221_reset_led(LED_FSEL_5);
+				max7221_reset_led(LED_FSEL_6);
+				max7221_set_led(LED_FSEL_7);
+				max7221_reset_led(LED_FSEL_8);
+		break;
+		case 7: max7221_reset_led(LED_FSEL_1);
+                max7221_reset_led(LED_FSEL_2);
+                max7221_reset_led(LED_FSEL_3);
+                max7221_reset_led(LED_FSEL_4);
+				max7221_reset_led(LED_FSEL_5);
+				max7221_reset_led(LED_FSEL_6);
+				max7221_reset_led(LED_FSEL_7);
+				max7221_set_led(LED_FSEL_8);
         break;
     }
 }

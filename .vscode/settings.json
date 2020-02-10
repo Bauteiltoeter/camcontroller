@@ -9,6 +9,13 @@
         "array": "c",
         "tuple": "c",
         "type_traits": "c",
-        "utility": "c"
+        "utility": "c",
+        "menu_lock.h": "c",
+        "menu_system.h": "c",
+        "menu_cam_config.h": "c"
+    },
+    "files.exclude": {
+        "**/*.lst": true,
+        "**/*.o": true,
     }
 }

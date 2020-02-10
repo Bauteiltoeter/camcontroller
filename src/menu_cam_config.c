@@ -8,7 +8,7 @@
 #include <stddef.h>
 
 
-uint8_t setup_active_cam=0;
+uint8_t setup_active_fixture=0;
 uint8_t param_id=0;
 
 
@@ -30,81 +30,11 @@ typedef struct {
 const __flash cam_setup_parameters_t cam_setup_parameters[] = 
 {
 	{
-		.name = "Camera active       ",
-		.type = type_uint8,
-		.offset = offsetof(cam_data_t, cam_active),
-		.min = 0,
-		.max = 1
-	},
-	{
 		.name = "base_addr           ",
 		.type = type_uint16,
-		.offset = offsetof(cam_data_t, base_addr),
+		.offset = offsetof(moving_fixture_data_t, base_addr),
 		.min = 1,
 		.max = 512
-	},
-	{
-		.name = "pan address         ",
-		.type = type_uint16,
-		.offset = offsetof(cam_data_t, pan_address),
-		.min = 0,
-		.max = 512
-	},
-	{
-		.name = "tilt address       ",
-		.type = type_uint16,
-		.offset = offsetof(cam_data_t, tilt_address),
-		.min = 0,
-		.max = 512
-	},
-	{
-		.name = "speed address       ",
-		.type = type_uint16,
-		.offset = offsetof(cam_data_t, speed_address),
-		.min = 0,
-		.max = 512
-	},
-	{
-		.name = "switch address      ",
-		.type = type_uint16,
-		.offset = offsetof(cam_data_t, switch_address),
-		.min = 0,
-		.max = 512
-	},
-	{
-		.name = "invert pan          ",
-		.type = type_uint8,
-		.offset = offsetof(cam_data_t, pan_invert),
-		.min = 0,
-		.max = 1
-	},
-	{
-		.name = "invert tilt         ",
-		.type = type_uint8,
-		.offset = offsetof(cam_data_t, tilt_invert),
-		.min = 0,
-		.max = 1
-	},
-	{
-		.name = "pan scaling         ",
-		.type = type_uint16,
-		.offset = offsetof(cam_data_t, pan_scaling),
-		.min = 0,
-		.max = 100
-	},
-	{
-		.name = "tilt scaling        ",
-		.type = type_uint16,
-		.offset = offsetof(cam_data_t, tilt_scaling),
-		.min = 0,
-		.max = 100
-	},
-	{
-		.name = "lockout movement    ",
-		.type = type_uint8,
-		.offset = offsetof(cam_data_t, lockMove),
-		.min = 0,
-		.max = 1
 	}
 };
 
@@ -114,27 +44,27 @@ void setup_show_cam(void)
 	lcd_gotoxy(0,1);
 
 	char tmp[10];
-	itoa(setup_active_cam+1,tmp,10);
-	lcd_puts("Edit Cam ");
-	lcd_gotoxy(9,1);
+	itoa(setup_active_fixture+1,tmp,10);
+	lcd_puts("Edit moving fixture ");
+	lcd_gotoxy(19,1);
 	lcd_puts(tmp);
 }
 
 void setup_cam_up(void)
 {
-	setup_active_cam++;
+	setup_active_fixture++;
 
-	if(setup_active_cam>= CAM_COUNT)
-		setup_active_cam=0;
+	if(setup_active_fixture>= MOVING_FIXTURE_COUNT)
+		setup_active_fixture=0;
 
 	setup_show_cam();
 }
 
 void setup_cam_down(void)
 {
-	setup_active_cam--;
-	if(setup_active_cam>= CAM_COUNT)
-		setup_active_cam= CAM_COUNT-1;
+	setup_active_fixture--;
+	if(setup_active_fixture>= MOVING_FIXTURE_COUNT)
+		setup_active_fixture= MOVING_FIXTURE_COUNT-1;
 
 	setup_show_cam();
 }
@@ -154,13 +84,13 @@ void param_up(void)
 {
 	switch(cam_setup_parameters[param_id].type)
 	{
-		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))++; 
-						 if(*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-							*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
+		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset))++; 
+						 if(*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+							*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
 		break;
-		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))++; 
-					    if(*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-						   *(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
+		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset))++; 
+					    if(*(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+						   *(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
 		break;
 	}
 	param_show();	
@@ -170,13 +100,13 @@ void param_down(void)
 {
 	switch(cam_setup_parameters[param_id].type)
 	{
-		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))--; 
-						 if(*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-							*(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
+		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset))--; 
+						 if(*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+							*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
 		break;
-		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset))--; 
-					    if(*(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-						   *(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
+		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset))--; 
+					    if(*(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+						   *(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
 		break;
 	}
 	param_show();	
@@ -198,12 +128,12 @@ void param_show(void)
 
 	if(cam_setup_parameters[param_id].type == type_uint16)
 	{
-		rotary_param_conf.data_u16 = ((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset;
+		rotary_param_conf.data_u16 = ((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset;
 		rotary_param_conf.type = rotary_uint16;
 	}	
 	else if(cam_setup_parameters[param_id].type == type_uint8)
 	{
-		rotary_param_conf.data_u8 = ((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset;
+		rotary_param_conf.data_u8 = ((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset;
 		rotary_param_conf.type = rotary_uint8;
 	}
 
@@ -216,7 +146,7 @@ void param_show(void)
 	lcd_gotoxy(14,0);
 	lcd_puts("CAM ");
 	char tmp[10];
-	itoa(setup_active_cam+1,tmp,10);
+	itoa(setup_active_fixture+1,tmp,10);
 	lcd_gotoxy(18,0);
 	lcd_puts(tmp);
 
@@ -225,8 +155,8 @@ void param_show(void)
 
 	switch(cam_setup_parameters[param_id].type)
 	{
-		case type_uint16: itoa( *(uint16_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
-		case type_uint8: itoa( *(uint8_t*)(((void*)&cams[setup_active_cam]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
+		case type_uint16: itoa( *(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
+		case type_uint8: itoa( *(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
 	}
 
 

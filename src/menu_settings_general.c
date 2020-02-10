@@ -12,15 +12,7 @@ typedef struct {
 setting_menu_t setting_menues[] = {
 	{
 		.menu = MENU_SETUP,
-		.description = "Camera setup        "
-	},
-	{
-		.menu = MENU_CTRL,
-		.description = "Camera controlling  "
-	},
-	{
-		.menu = MENU_ALL_POWER,
-		.description = "General camera power"
+		.description = "Device setup        "
 	},
 	{
 		.menu = MENU_LOCKED,
@@ -37,10 +29,6 @@ setting_menu_t setting_menues[] = {
 	{
 		.menu = MENU_RESET,
 		.description = "Reset settings      "
-    },
-    {
-        .menu = MENU_BMMCC,
-        .description = "BMMCC settings      "
     }
 };
 

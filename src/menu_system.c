@@ -3,32 +3,26 @@
 #include "menu_lock.h"
 #include "menu_settings_general.h"
 #include "menu_cam_config.h"
-#include "menu_cam_ctrl.h"
-#include "menu_all_power.h"
 #include "menu_hardware.h"
-#include "menu_bmmcc.h"
-#include "menu_tally.h"
 #include "lcd.h"
 #include "hardware.h"
 
 
-extern void store_clear(void);
 extern void save_data(void);
 extern void load_default(void);
-extern void update_leds(void);
 extern void lock_system(void); 
 
-static const char MENU_SPLASH_L1[] PROGMEM			= "StreamingFurs       ";
-static const char MENU_SPLASH_L2[] PROGMEM			= "CaracalCamController";
-static const char MENU_SPLASH_L3[] PROGMEM			= "By Karrn            ";
-static const char MENU_SPLASH_L4[] PROGMEM			= "                2018";
+static const char MENU_SPLASH_L1[] PROGMEM			= "DragonWolfTech      ";
+static const char MENU_SPLASH_L2[] PROGMEM			= "SimpleDMX controller";
+static const char MENU_SPLASH_L3[] PROGMEM			= "Karrn und Sternchen ";
+static const char MENU_SPLASH_L4[] PROGMEM			= "                2020";
 
 static const char MENU_MAIN_L1[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L2[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L3[] PROGMEM			= "                    ";
-static const char MENU_MAIN_L4[] PROGMEM			= "STORE    TALLY  MENU";
+static const char MENU_MAIN_L4[] PROGMEM			= "STORE           MENU";
 
-static const char MENU_SETUP_L1[] PROGMEM			= "Select cam          ";
+static const char MENU_SETUP_L1[] PROGMEM			= "Select fixture      ";
 static const char MENU_SETUP_L2[] PROGMEM			= "                    ";
 static const char MENU_SETUP_L3[] PROGMEM			= "                    ";
 static const char MENU_SETUP_L4[] PROGMEM			= "PREV NEXT ENTER BACK";
@@ -58,16 +52,6 @@ static const char MENU_RESET_L2[] PROGMEM			= "Load default config ";
 static const char MENU_RESET_L3[] PROGMEM			= "and erase all data? ";
 static const char MENU_RESET_L4[] PROGMEM			= "YES             BACK";
 
-static const char MENU_CTRL_L1[] PROGMEM			= "Setup               ";
-static const char MENU_CTRL_L2[] PROGMEM			= "                    ";
-static const char MENU_CTRL_L3[] PROGMEM			= "                    ";
-static const char MENU_CTRL_L4[] PROGMEM			= "PREV NEXT CTRL  BACK";
-
-static const char MENU_CTRL_EDIT_L1[] PROGMEM		= "Setup               ";
-static const char MENU_CTRL_EDIT_L2[] PROGMEM		= "                    ";
-static const char MENU_CTRL_EDIT_L3[] PROGMEM		= "  Power             ";
-static const char MENU_CTRL_EDIT_L4[] PROGMEM		= " ON  OFF   BTN  BACK";
-
 static const char MENU_LOCKED_L1[] PROGMEM			= "    DragonVideo     ";
 static const char MENU_LOCKED_L2[] PROGMEM			= "  **** LOCKED ****  ";
 static const char MENU_LOCKED_L3[] PROGMEM			= "                    ";
@@ -77,11 +61,6 @@ static const char MENU_LOCK_SETUP_L1[] PROGMEM		= "Setup               ";
 static const char MENU_LOCK_SETUP_L2[] PROGMEM		= "Enter new code:     ";
 static const char MENU_LOCK_SETUP_L3[] PROGMEM		= "                    ";
 static const char MENU_LOCK_SETUP_L4[] PROGMEM		= " 1    2     3     4 ";
-
-static const char MENU_ALL_POWER_L1[] PROGMEM 		= "Setup               ";
-static const char MENU_ALL_POWER_L2[] PROGMEM 		= "                    ";
-static const char MENU_ALL_POWER_L3[] PROGMEM 		= "Switch all cams     ";
-static const char MENU_ALL_POWER_L4[] PROGMEM 		= "ON   OFF        BACK";
 
 static const char MENU_HARDWARE_L1[] PROGMEM 		= "                    ";
 static const char MENU_HARDWARE_L2[] PROGMEM 		= "                    ";
@@ -93,16 +72,6 @@ static const char MENU_LED_BRIGHTNESS_L2[] PROGMEM  = "                    ";
 static const char MENU_LED_BRIGHTNESS_L3[] PROGMEM  = "                    ";
 static const char MENU_LED_BRIGHTNESS_L4[] PROGMEM  = "UP  DOWN        BACK";
 
-
-static const char MENU_BMMCC_L1[] PROGMEM  = "BMMCC setup         ";
-static const char MENU_BMMCC_L2[] PROGMEM  = "                    ";
-static const char MENU_BMMCC_L3[] PROGMEM  = "                    ";
-static const char MENU_BMMCC_L4[] PROGMEM  = "DOWN UP   NEXT  BACK";
-
-static const char MENU_TALLY_L1[] PROGMEM  = "Send tally info     ";
-static const char MENU_TALLY_L2[] PROGMEM  = "No connection info  ";
-static const char MENU_TALLY_L3[] PROGMEM  = "                    ";
-static const char MENU_TALLY_L4[] PROGMEM  = "AUTO YELOW BLUE BACK";
 
 
 //Define the menu structure
@@ -119,7 +88,7 @@ __flash const menu_t menues[] =
     },
 	{ //MENU_MAIN
 		.lines = { MENU_MAIN_L1,MENU_MAIN_L2,MENU_MAIN_L3,MENU_MAIN_L4},
-		.next  = { MENU_STORE, MENU_INVALID,MENU_TALLY,MENU_GENERAL_SETUP,MENU_INVALID},
+		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
 		.cb    = { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = main_init,
@@ -155,8 +124,8 @@ __flash const menu_t menues[] =
 	},
 	{ //MENU_CLEAR
 		.lines = { MENU_CLEAR_L1,MENU_CLEAR_L2,MENU_CLEAR_L3,MENU_CLEAR_L4},
-		.next  = { MENU_MAIN,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
-		.cb    = { store_clear,NULL, NULL, NULL,NULL},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+		.cb    = { NULL,NULL, NULL, NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL,
 		.cyclic = NULL,
@@ -179,25 +148,7 @@ __flash const menu_t menues[] =
 		.init  = NULL,
 		.cyclic = NULL,
 		.rotary= NULL
-	},  
-	{ //MENU_CTRL
-		.lines = { MENU_CTRL_L1,MENU_CTRL_L2,MENU_CTRL_L3,MENU_CTRL_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_GENERAL_SETUP,MENU_CTRL_EDIT},
-		.cb    = { ctrl_cam_down,ctrl_cam_up, NULL, NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = ctrl_cam_show,
-		.cyclic = NULL,
-		.rotary= &rotary_menu_ctrl
-	},  
-	{ //MENU_CTRL_EDIT
-		.lines = { MENU_CTRL_EDIT_L1,MENU_CTRL_EDIT_L2,MENU_CTRL_EDIT_L3,MENU_CTRL_EDIT_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_CTRL_EDIT,MENU_CTRL,MENU_INVALID},
-		.cb    = { cam_power_on,cam_power_off, cam_button_press, NULL,NULL},
-		.cb_r=   { NULL,NULL,cam_button_release,NULL,NULL},
-		.init  = cam_power_show,
-		.cyclic = NULL,
-		.rotary= NULL
-	} ,  
+	},   
 	{ //MENU_LOCKED
 		.lines = { MENU_LOCKED_L1,MENU_LOCKED_L2,MENU_LOCKED_L3,MENU_LOCKED_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_INVALID},
@@ -215,16 +166,7 @@ __flash const menu_t menues[] =
 		.init  = NULL,
 		.cyclic = NULL,
 		.rotary= NULL
-	} ,  
-	{ //MENU_ALL_POWER
-		.lines = { MENU_ALL_POWER_L1,MENU_ALL_POWER_L2,MENU_ALL_POWER_L3,MENU_ALL_POWER_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
-		.cb    = {switch_cams_on,switch_cams_off, NULL, NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = NULL,
-		.cyclic = NULL,
-		.rotary= NULL
-	} ,
+	},
 	{ //MENU_HARDWARE
 		.lines = { MENU_HARDWARE_L1,MENU_HARDWARE_L2,MENU_HARDWARE_L3,MENU_HARDWARE_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
@@ -242,25 +184,7 @@ __flash const menu_t menues[] =
 		.init  = NULL,
 		.cyclic = NULL,
 		.rotary= NULL
-	}  ,
-    { //MENU_BMMCC
-        .lines = { MENU_BMMCC_L1,MENU_BMMCC_L2,MENU_BMMCC_L3,MENU_BMMCC_L4},
-        .next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
-        .cb    = { menu_bmmcc_down,menu_bmmcc_up,menu_bmmcc_next,NULL,NULL},
-        .cb_r=   { NULL,NULL,NULL,NULL,NULL},
-        .init  = menu_bmmcc_init,
-        .cyclic = NULL,
-        .rotary= NULL
-    } ,
-    { //MENU_TALLY
-        .lines = { MENU_TALLY_L1,MENU_TALLY_L2,MENU_TALLY_L3,MENU_TALLY_L4},
-        .next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
-        .cb    = { menu_tally_auto,menu_tally_yellow,menu_tally_blue,NULL,NULL},
-        .cb_r=   { NULL,NULL,NULL,NULL,NULL},
-        .init  = menu_tally_init,
-        .cyclic = NULL,
-        .rotary= NULL
-    }
+	}
 };
 
 menu_identifiers active_menu;
@@ -317,9 +241,6 @@ void set_menu(menu_identifiers menu)
 
 	if(menues[menu].init)
 		menues[menu].init();
-
-	update_leds();
-
 }
 
 

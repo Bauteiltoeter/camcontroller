@@ -29,39 +29,33 @@
 	} softkey_t;
 
 	typedef enum {
-		CAM_NO_KEY = 255,
-		CAM1 = 0,
-		CAM2 = 1,
-		CAM3 = 2,
-		CAM4 = 3
-	} camkey_t;
-
-	typedef enum {
-		STORE_NO_KEY = 255,
-		STORE1 = 0,
-		STORE2 = 1,
-		STORE3 = 2,
-		STORE4 = 3
-	} storekey_t;
+		FIX_NO_KEY = 255,
+		FIX1 = 0,
+		FIX2 = 1,
+		FIX3 = 2,
+		FIX4 = 3
+	} fixturekey_t;
 
 	typedef enum {
         FSEL_NO_KEY = 255,
         FSEL1 = 0,
         FSEL2 = 1,
         FSEL3 = 2,
-        FSEL4 = 3
+        FSEL4 = 3,
+		FSEL5 = 4,
+		FSEL6 = 5,
+		FSEL7 = 6,
+		FSEL8 = 7
     } fselkey_t;
 
 	void hardware_tick(void);
 	void hardware_init(void);
+
 	softkey_t get_softkeys(void);
-	camkey_t get_camkeys(void);
-	storekey_t get_storekeys(void);
+	fixturekey_t get_fixturekeys(void);
     fselkey_t get_fselkeys(void);
-	uint8_t get_cam1_key(void);
-	void set_store_led(uint8_t led);
-	void reset_store_led(uint8_t led);
-	void set_cam_leds(uint8_t active);
+
+	void set_fixture_leds(uint8_t active);
     void set_fsel_leds(uint8_t function);
 	void set_rotarys_leds(uint8_t number);
 	uint8_t get_matrix_line(uint8_t line);
