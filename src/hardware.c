@@ -119,7 +119,7 @@ void hardware_tick(void)
 	
 }
 
-fixturekey_t get_camkeys(void)
+fixturekey_t get_fixturekeys(void)
 {	
 	static uint8_t old_k1=0;
 //static uint8_t old_k2=0;
@@ -323,9 +323,12 @@ uint8_t get_matrix_line(uint8_t line)
 
 
 
-void set_fsel_leds(uint8_t function)
+void set_fsel_leds(uint8_t function,uint8_t bank)
 {
-	function--;
+
+	if(bank>0)
+		function=function-7;
+
     switch(function)
     {
         case 0: max7221_set_led(LED_FSEL_1);
@@ -335,7 +338,6 @@ void set_fsel_leds(uint8_t function)
 				max7221_reset_led(LED_FSEL_5);
 				max7221_reset_led(LED_FSEL_6);
 				max7221_reset_led(LED_FSEL_7);
-				max7221_reset_led(LED_FSEL_8);
         break;
         case 1: max7221_reset_led(LED_FSEL_1);
                 max7221_set_led(LED_FSEL_2);
@@ -344,7 +346,6 @@ void set_fsel_leds(uint8_t function)
 				max7221_reset_led(LED_FSEL_5);
 				max7221_reset_led(LED_FSEL_6);
 				max7221_reset_led(LED_FSEL_7);
-				max7221_reset_led(LED_FSEL_8);
         break;
         case 2: max7221_reset_led(LED_FSEL_1);
                 max7221_reset_led(LED_FSEL_2);
@@ -353,7 +354,6 @@ void set_fsel_leds(uint8_t function)
 				max7221_reset_led(LED_FSEL_5);
 				max7221_reset_led(LED_FSEL_6);
 				max7221_reset_led(LED_FSEL_7);
-				max7221_reset_led(LED_FSEL_8);
         break;
         case 3: max7221_reset_led(LED_FSEL_1);
                 max7221_reset_led(LED_FSEL_2);
@@ -362,7 +362,6 @@ void set_fsel_leds(uint8_t function)
 				max7221_reset_led(LED_FSEL_5);
 				max7221_reset_led(LED_FSEL_6);
 				max7221_reset_led(LED_FSEL_7);
-				max7221_reset_led(LED_FSEL_8);
 		break;
 		case 4: max7221_reset_led(LED_FSEL_1);
                 max7221_reset_led(LED_FSEL_2);
@@ -371,7 +370,6 @@ void set_fsel_leds(uint8_t function)
 				max7221_set_led(LED_FSEL_5);
 				max7221_reset_led(LED_FSEL_6);
 				max7221_reset_led(LED_FSEL_7);
-				max7221_reset_led(LED_FSEL_8);
 		break;
 		case 5: max7221_reset_led(LED_FSEL_1);
                 max7221_reset_led(LED_FSEL_2);
@@ -380,7 +378,6 @@ void set_fsel_leds(uint8_t function)
 				max7221_reset_led(LED_FSEL_5);
 				max7221_set_led(LED_FSEL_6);
 				max7221_reset_led(LED_FSEL_7);
-				max7221_reset_led(LED_FSEL_8);
 		break;
 		case 6: max7221_reset_led(LED_FSEL_1);
                 max7221_reset_led(LED_FSEL_2);
@@ -389,16 +386,25 @@ void set_fsel_leds(uint8_t function)
 				max7221_reset_led(LED_FSEL_5);
 				max7221_reset_led(LED_FSEL_6);
 				max7221_set_led(LED_FSEL_7);
-				max7221_reset_led(LED_FSEL_8);
 		break;
-		case 7: max7221_reset_led(LED_FSEL_1);
+		default: max7221_reset_led(LED_FSEL_1);
                 max7221_reset_led(LED_FSEL_2);
                 max7221_reset_led(LED_FSEL_3);
                 max7221_reset_led(LED_FSEL_4);
 				max7221_reset_led(LED_FSEL_5);
 				max7221_reset_led(LED_FSEL_6);
 				max7221_reset_led(LED_FSEL_7);
-				max7221_set_led(LED_FSEL_8);
         break;
     }
+}
+
+void set_bank_led(uint8_t on)
+{
+	if(on)
+		max7221_set_led(LED_FSEL_8);
+	else
+	{
+		max7221_reset_led(LED_FSEL_8);
+	}
+	
 }

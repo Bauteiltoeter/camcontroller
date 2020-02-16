@@ -11,12 +11,6 @@
 uint8_t setup_active_fixture=0;
 uint8_t param_id=0;
 
-
-typedef enum {
-	type_uint16,
-	type_uint8
-} parameter_type;
-
 typedef struct {
 	char* name;
 	parameter_type type;
@@ -30,9 +24,9 @@ typedef struct {
 const __flash cam_setup_parameters_t cam_setup_parameters[] = 
 {
 	{
-		.name = "base_addr           ",
+		.name = "DMX ADDR            ",
 		.type = type_uint16,
-		.offset = offsetof(moving_fixture_data_t, base_addr),
+		.offset = offsetof(imagescan_data_t, dmx_addr),
 		.min = 1,
 		.max = 512
 	}
@@ -84,13 +78,13 @@ void param_up(void)
 {
 	switch(cam_setup_parameters[param_id].type)
 	{
-		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset))++; 
-						 if(*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-							*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
+		case type_uint16:  (*(uint16_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset))++; 
+						 if(*(uint16_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+							*(uint16_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
 		break;
-		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset))++; 
-					    if(*(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-						   *(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
+		case type_uint8:  (*(uint8_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset))++; 
+					    if(*(uint8_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+						   *(uint8_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].min;
 		break;
 	}
 	param_show();	
@@ -100,13 +94,13 @@ void param_down(void)
 {
 	switch(cam_setup_parameters[param_id].type)
 	{
-		case type_uint16:  (*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset))--; 
-						 if(*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-							*(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
+		case type_uint16:  (*(uint16_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset))--; 
+						 if(*(uint16_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+							*(uint16_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
 		break;
-		case type_uint8:  (*(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset))--; 
-					    if(*(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
-						   *(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
+		case type_uint8:  (*(uint8_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset))--; 
+					    if(*(uint8_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  > cam_setup_parameters[param_id].max )
+						   *(uint8_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset)  = cam_setup_parameters[param_id].max;
 		break;
 	}
 	param_show();	
@@ -128,12 +122,12 @@ void param_show(void)
 
 	if(cam_setup_parameters[param_id].type == type_uint16)
 	{
-		rotary_param_conf.data_u16 = ((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset;
+		rotary_param_conf.data_u16 = ((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset;
 		rotary_param_conf.type = rotary_uint16;
 	}	
 	else if(cam_setup_parameters[param_id].type == type_uint8)
 	{
-		rotary_param_conf.data_u8 = ((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset;
+		rotary_param_conf.data_u8 = ((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset;
 		rotary_param_conf.type = rotary_uint8;
 	}
 
@@ -155,8 +149,8 @@ void param_show(void)
 
 	switch(cam_setup_parameters[param_id].type)
 	{
-		case type_uint16: itoa( *(uint16_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
-		case type_uint8: itoa( *(uint8_t*)(((void*)&cams[setup_active_fixture]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
+		case type_uint16: itoa( *(uint16_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
+		case type_uint8: itoa( *(uint8_t*)(((void*)&imageScan_data[setup_active_fixture]) + cam_setup_parameters[param_id].offset), tmp, 10); break;
 	}
 
 

@@ -10,6 +10,7 @@
 
 #define ROTARY_A 6
 #define ROTARY_B 5
+#define ROTARY_BUTTON 4
 
 
 #define PHASE_A     (ROTARY_PIN & 1<<ROTARY_A)
@@ -25,7 +26,7 @@ static rotary_config_t* current_config = NULL;
 
 void rotary_init(void)
 {
-	ROTARY_DDR &= ~( (1<<ROTARY_A) | (1<<ROTARY_B));
+	ROTARY_DDR &= ~( (1<<ROTARY_A) | (1<<ROTARY_B) | (1<<ROTARY_BUTTON));
 
 	int8_t new;
 
@@ -71,9 +72,25 @@ void rotary_process(void)
 	int8_t diff = encode_read();
 	int32_t tmp;
 
-	if(diff!=0 && current_config!=NULL)
+	uint8_t buttonPressed=0;
+	static uint8_t buttonWasPressed=0;
+	if(!(ROTARY_PIN & (1<<ROTARY_BUTTON)))
+	{	
+		if(!buttonWasPressed)
+			buttonPressed=1;
+		buttonWasPressed=1;
+	}
+	else
+	{
+		buttonWasPressed=0;
+	}
+	
+
+	if(current_config!=NULL &&( diff!=0 || buttonPressed==1))
 	{
 		diff = diff * current_config->multi;
+
+		
 
 		switch(current_config->type)
 		{
@@ -86,6 +103,17 @@ void rotary_process(void)
 								else if( diff < 0 &&  tmp < (int16_t)current_config->min )
 								{
 									tmp = current_config->wrap==1? current_config->max : current_config->min;
+								}
+
+
+								if(buttonPressed)
+								{	if(tmp <current_config->max/2)
+										tmp=current_config->max/2;
+									else if(tmp < current_config->max)
+										tmp=current_config->max;
+									else
+										tmp=current_config->min;
+									
 								}
 
 								*(current_config->data_u8)=tmp;
@@ -102,10 +130,15 @@ void rotary_process(void)
 									tmp = current_config->wrap==1? current_config->max : current_config->min;
 								}
 
+
+								if(buttonPressed)
+									tmp=65535;
+
 								*(current_config->data_u16)=tmp;
 
 			break;
 		}		
+
 
 		if(current_config->change)
 			current_config->change();

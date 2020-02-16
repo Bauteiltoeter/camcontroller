@@ -43,6 +43,8 @@ void unlock_system(void);
 
 //cam_data_t backup_cams[CAM_COUNT] EEMEM; //store CAM Data in eeprom
 uint8_t menu_lock_active EEMEM;
+
+static void writeDmxOutput(void);
 //Hauptprogramm
 int main (void) 
 {  
@@ -87,6 +89,9 @@ int main (void)
 //	}
 
 
+	
+
+
 	uint16_t blink_counter=0;
 	uint8_t loop=0;
 
@@ -113,6 +118,7 @@ int main (void)
 		}
 		
 
+	
 
 		hardware_tick();
 		rotary_tick();
@@ -150,4 +156,71 @@ void unlock_system(void)
 {
 	eeprom_write_byte(&menu_lock_active, 0);
 }
+
+static void writeImageScan(imagescan_data_t* data)
+{
+	write_dmx(data->dmx_addr-1 + 0, data->shutter);
+	write_dmx(data->dmx_addr-1 + 1, data->focus);
+	write_dmx(data->dmx_addr-1 + 2, data->rotf);
+	write_dmx(data->dmx_addr-1 + 3, data->rot);
+	write_dmx(data->dmx_addr-1 + 4, data->pan>>8);
+	write_dmx(data->dmx_addr-1 + 5, data->pan);
+	write_dmx(data->dmx_addr-1 + 6, data->tilt>>8);
+	write_dmx(data->dmx_addr-1 + 7, data->tilt);
+}
+
+static void writeCameoTri(cameotri_data_t* data)
+{
+	write_dmx(data->dmx_addr-1 + 0, data->dimmer);
+	write_dmx(data->dmx_addr-1 + 1, data->strobe);
+	write_dmx(data->dmx_addr-1 + 2, data->red);
+	write_dmx(data->dmx_addr-1 + 3, data->green);
+	write_dmx(data->dmx_addr-1 + 4, data->blue);
+	write_dmx(data->dmx_addr-1 + 5, data->color);
+}
+
+static void writeCameoFlood(cameoflood_data_t* data)
+{
+	write_dmx(data->dmx_addr-1 + 0, data->dimmer);
+	write_dmx(data->dmx_addr-1 + 1, data->strobe);
+	write_dmx(data->dmx_addr-1 + 2, data->duration);
+	write_dmx(data->dmx_addr-1 + 3, data->red);
+	write_dmx(data->dmx_addr-1 + 4, data->green);
+	write_dmx(data->dmx_addr-1 + 5, data->blue);
+	write_dmx(data->dmx_addr-1 + 6, data->white);
+	write_dmx(data->dmx_addr-1 + 7, data->amber);
+	write_dmx(data->dmx_addr-1 + 8, data->uv);
+}
+
+static void writeCitycolor(citycolor_data_t* data)
+{
+	write_dmx(data->dmx_addr-1 + 0, data->motorspeed);
+	write_dmx(data->dmx_addr-1 + 1, data->cyan);
+	write_dmx(data->dmx_addr-1 + 2, data->yellow);
+	write_dmx(data->dmx_addr-1 + 3, data->magenta);
+	write_dmx(data->dmx_addr-1 + 4, 0);
+	write_dmx(data->dmx_addr-1 + 5, data->basiccolors);
+	write_dmx(data->dmx_addr-1 + 6, data->lamp);
+}
+
+static void writeDmxOutput(void)
+{	
+	writeImageScan(&imageScan_data[0]);
+	writeImageScan(&imageScan_data[1]);
+	writeCameoTri(&cameotri_data[0]);
+	writeCameoTri(&cameotri_data[1]);
+	writeCameoTri(&cameotri_data[2]);
+	writeCameoTri(&cameotri_data[3]);
+	writeCameoTri(&cameotri_data[4]);
+	writeCameoTri(&cameotri_data[5]);
+	writeCameoFlood(&cameoflood_data[0]);
+	writeCameoFlood(&cameoflood_data[1]);
+	writeCameoFlood(&cameoflood_data[2]);
+	writeCitycolor(&citycolor_data[0]);
+	writeCitycolor(&citycolor_data[1]);
+	writeCitycolor(&citycolor_data[2]);
+}
+
+
+
 
