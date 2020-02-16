@@ -12,7 +12,8 @@
         "utility": "c",
         "menu_lock.h": "c",
         "menu_system.h": "c",
-        "menu_cam_config.h": "c"
+        "menu_cam_config.h": "c",
+        "scenestorage.h": "c"
     },
     "files.exclude": {
         "**/*.lst": true,

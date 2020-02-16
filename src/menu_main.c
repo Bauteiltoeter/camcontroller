@@ -78,7 +78,7 @@ static selected_status_t selected_status = selected_none;
 //uint8_t focusValue;
 static uint8_t active_param;
 static uint8_t fixture_selected;
-static fixture_parametersetindex parameterSetIndex;
+static fixture_parametersetindex parameterSetIndex = imageScan;
 static uint8_t parameterBank=0;
 
 static void updateConfig(void);
@@ -336,7 +336,7 @@ const fixture_parameterset_t fixture_parameterset[] =
 void main_init(void)
 {
 	main_show();
-	parameterSetIndex = imageScan;
+	//parameterSetIndex = imageScan;
 }
 
 void main_show(void)
@@ -539,15 +539,11 @@ static void updateLcd(void)
 	if(parameterSetIndex == imageScan)
 	{
 		lcd_gotoxy(0,2);
-		sprintf(tmp, "%u:%u        ",imageScan_data[0].pan,imageScan_data[0].tilt);
+		sprintf(tmp, "%u:%u        ",imageScan_data[getCurrentIndex()].pan,imageScan_data[getCurrentIndex()].tilt);
 		lcd_puts(tmp);
 	}
 
 
-	lcd_gotoxy(15,0);
-	sprintf(tmp, "%d %d",imageScan_data[0].selected,imageScan_data[1].selected);
-	lcd_puts(tmp);
-	lcd_gotoxy(19,1);
 //	
 //	sprintf(tmp, "%d",active_param);
 //	lcd_puts(tmp);

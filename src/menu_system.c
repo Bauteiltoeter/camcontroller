@@ -4,6 +4,9 @@
 #include "menu_settings_general.h"
 #include "menu_hardware.h"
 #include "menu_dmxaddr.h"
+#include "menu_scenes.h"
+#include "menu_playback.h"
+#include "menu_times.h"
 #include "lcd.h"
 #include "hardware.h"
 
@@ -20,17 +23,7 @@ static const char MENU_SPLASH_L4[] PROGMEM			= "                2020";
 static const char MENU_MAIN_L1[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L2[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L3[] PROGMEM			= "                    ";
-static const char MENU_MAIN_L4[] PROGMEM			= "STORE           MENU";
-
-static const char MENU_STORE_L1[] PROGMEM			= "Store               ";
-static const char MENU_STORE_L2[] PROGMEM			= "Choose store to save";
-static const char MENU_STORE_L3[] PROGMEM			= "                    ";
-static const char MENU_STORE_L4[] PROGMEM			= "     CLEAR     ABORT";
-
-static const char MENU_CLEAR_L1[] PROGMEM			= "Clear store         ";
-static const char MENU_CLEAR_L2[] PROGMEM			= "Choose store        "; 
-static const char MENU_CLEAR_L3[] PROGMEM			= "                    ";
-static const char MENU_CLEAR_L4[] PROGMEM			= "ALL            ABORT";
+static const char MENU_MAIN_L4[] PROGMEM			= "SCENE TIME PLAY MENU";
 
 static const char MENU_GENERAL_SETUP_L1[] PROGMEM	= "Choose menu option  ";
 static const char MENU_GENERAL_SETUP_L2[] PROGMEM	= "                    ";
@@ -67,6 +60,22 @@ static const char MENU_LED_DMXADDR_L2[] PROGMEM     = "                    ";
 static const char MENU_LED_DMXADDR_L3[] PROGMEM     = "                    ";
 static const char MENU_LED_DMXADDR_L4[] PROGMEM     = "AUTO      NEXT  BACK";
 
+static const char MENU_SCENES_L1[] PROGMEM     		= "Scene menu          ";
+static const char MENU_SCENES_L2[] PROGMEM     		= "                    ";
+static const char MENU_SCENES_L3[] PROGMEM     		= "                    ";
+static const char MENU_SCENES_L4[] PROGMEM     		= "LOAD  DEL  SAVE BACK";
+
+static const char MENU_TIMES_L1[] PROGMEM     		= "Configure times:    ";
+static const char MENU_TIMES_L2[] PROGMEM     		= "                    ";
+static const char MENU_TIMES_L3[] PROGMEM     		= "                    ";
+static const char MENU_TIMES_L4[] PROGMEM     		= "CROSS TIME PLAY BACK";
+
+static const char MENU_PLAYBACK_L1[] PROGMEM     	= "Playback            ";
+static const char MENU_PLAYBACK_L2[] PROGMEM     	= "Current scene:      ";
+static const char MENU_PLAYBACK_L3[] PROGMEM     	= "                    ";
+static const char MENU_PLAYBACK_L4[] PROGMEM     	= "                STOP";
+
+
 
 
 //Define the menu structure
@@ -83,31 +92,13 @@ __flash const menu_t menues[] =
     },
 	{ //MENU_MAIN
 		.lines = { MENU_MAIN_L1,MENU_MAIN_L2,MENU_MAIN_L3,MENU_MAIN_L4},
-		.next  = { MENU_STORE, MENU_INVALID,MENU_INVALID,MENU_GENERAL_SETUP,MENU_INVALID},
+		.next  = { MENU_SCENES, MENU_TIMES,MENU_PLAY,MENU_GENERAL_SETUP,MENU_INVALID},
 		.cb    = { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = main_init,
         .cyclic = main_run,
 		.rotary= NULL //the main menu uses the rotary encoder, but it's initialised in the main_init
 	},
-	{ //MENU_STORE
-		.lines = { MENU_STORE_L1,MENU_STORE_L2,MENU_STORE_L3,MENU_STORE_L4},
-		.next  = { MENU_INVALID,MENU_CLEAR,MENU_INVALID,MENU_MAIN,MENU_INVALID},
-		.cb    = { NULL,NULL, NULL, NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = NULL,
-		.cyclic = NULL,
-		.rotary= NULL
-	},
-	{ //MENU_CLEAR
-		.lines = { MENU_CLEAR_L1,MENU_CLEAR_L2,MENU_CLEAR_L3,MENU_CLEAR_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
-		.cb    = { NULL,NULL, NULL, NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = NULL,
-		.cyclic = NULL,
-		.rotary= NULL
-	}, 
 	{ //MENU_GENERAL_SETUP
 		.lines = { MENU_GENERAL_SETUP_L1,MENU_GENERAL_SETUP_L2,MENU_GENERAL_SETUP_L3,MENU_GENERAL_SETUP_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
@@ -169,6 +160,33 @@ __flash const menu_t menues[] =
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = dmxaddr_init,
 		.cyclic = NULL,
+		.rotary= NULL
+	}, //MENU_SCENES
+	{
+		.lines = { MENU_SCENES_L1,MENU_SCENES_L2,MENU_SCENES_L3,MENU_SCENES_L4},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+		.cb    = { scenes_load,scenes_delete,scenes_save,NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
+		.init  = scenes_init,
+		.cyclic = NULL,
+		.rotary= &rotary_scenes_menu
+	}, //MENU_TIMES
+	{
+		.lines = { MENU_TIMES_L1,MENU_TIMES_L2,MENU_TIMES_L3,MENU_TIMES_L4},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+		.cb    = { times_cross,times_time,times_play,times_save,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
+		.init  = times_init,
+		.cyclic = times_update,
+		.rotary= NULL
+	}, //MENU_PLAYBACK 
+	{
+		.lines = { MENU_PLAYBACK_L1,MENU_PLAYBACK_L2,MENU_PLAYBACK_L3,MENU_PLAYBACK_L4},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+		.cb    = { NULL,NULL,NULL,NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
+		.init  = playback_init,
+		.cyclic = playback_update,
 		.rotary= NULL
 	}
 };
