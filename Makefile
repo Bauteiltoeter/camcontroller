@@ -82,7 +82,7 @@ OBJDIR = .
 
 # List C source files here. (C dependencies are automatically generated.)
 #SRC = $(TARGET).c
-SRC = src/main.c src/lcd.c src/dmx.c src/adc.c src/hardware.c src/rotary.c src/menu_system.c src/menu_main.c src/globals.c src/menu_lock.c src/menu_store.c src/menu_settings_general.c src/menu_cam_config.c src/menu_hardware.c src/max7221.c src/uart.c 
+SRC = src/main.c src/lcd.c src/dmx.c src/adc.c src/hardware.c src/rotary.c src/menu_system.c src/menu_main.c src/globals.c src/menu_lock.c src/menu_store.c src/menu_settings_general.c src/menu_hardware.c src/max7221.c src/uart.c src/menu_dmxaddr.c
 
 # List C++ source files here. (C dependencies are automatically generated.)
 CPPSRC = 

@@ -55,9 +55,10 @@
 	fixturekey_t get_fixturekeys(void);
     fselkey_t get_fselkeys(void);
 
-	void set_fixture_leds(uint8_t active);
     void set_fsel_leds(uint8_t function,uint8_t bank);
 	void set_bank_led(uint8_t on);
+	void set_selecte_led(uint8_t on);
+	void set_deselectAll_led(uint8_t on);
 	void set_rotarys_leds(uint8_t number);
 	uint8_t get_matrix_line(uint8_t line);
 

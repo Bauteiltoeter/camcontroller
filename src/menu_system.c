@@ -2,8 +2,8 @@
 #include "menu_main.h"
 #include "menu_lock.h"
 #include "menu_settings_general.h"
-#include "menu_cam_config.h"
 #include "menu_hardware.h"
+#include "menu_dmxaddr.h"
 #include "lcd.h"
 #include "hardware.h"
 
@@ -21,16 +21,6 @@ static const char MENU_MAIN_L1[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L2[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L3[] PROGMEM			= "                    ";
 static const char MENU_MAIN_L4[] PROGMEM			= "STORE           MENU";
-
-static const char MENU_SETUP_L1[] PROGMEM			= "Select fixture      ";
-static const char MENU_SETUP_L2[] PROGMEM			= "                    ";
-static const char MENU_SETUP_L3[] PROGMEM			= "                    ";
-static const char MENU_SETUP_L4[] PROGMEM			= "PREV NEXT ENTER BACK";
-
-static const char MENU_EDIT_CAM_L1[] PROGMEM		= "Enter parameter     ";
-static const char MENU_EDIT_CAM_L2[] PROGMEM		= "                    ";
-static const char MENU_EDIT_CAM_L3[] PROGMEM		= "                    ";
-static const char MENU_EDIT_CAM_L4[] PROGMEM		= "DOWN UP   NEXT  BACK";
 
 static const char MENU_STORE_L1[] PROGMEM			= "Store               ";
 static const char MENU_STORE_L2[] PROGMEM			= "Choose store to save";
@@ -72,6 +62,11 @@ static const char MENU_LED_BRIGHTNESS_L2[] PROGMEM  = "                    ";
 static const char MENU_LED_BRIGHTNESS_L3[] PROGMEM  = "                    ";
 static const char MENU_LED_BRIGHTNESS_L4[] PROGMEM  = "UP  DOWN        BACK";
 
+static const char MENU_LED_DMXADDR_L1[] PROGMEM     = "DMX Address setup   ";
+static const char MENU_LED_DMXADDR_L2[] PROGMEM     = "                    ";
+static const char MENU_LED_DMXADDR_L3[] PROGMEM     = "                    ";
+static const char MENU_LED_DMXADDR_L4[] PROGMEM     = "AUTO      NEXT  BACK";
+
 
 
 //Define the menu structure
@@ -94,24 +89,6 @@ __flash const menu_t menues[] =
 		.init  = main_init,
         .cyclic = main_run,
 		.rotary= NULL //the main menu uses the rotary encoder, but it's initialised in the main_init
-	},
-	{ //MENU_SETUP
-		.lines = { MENU_SETUP_L1,MENU_SETUP_L2,MENU_SETUP_L3,MENU_SETUP_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_EDIT_CAM,MENU_GENERAL_SETUP,MENU_GENERAL_SETUP},
-		.cb    = { setup_cam_down,setup_cam_up,param_resetId,NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init =  setup_show_cam,
-		.cyclic = NULL,
-		.rotary= NULL 
-	},
-	{ //MENU_EDIT_CAM
-		.lines = { MENU_EDIT_CAM_L1,MENU_EDIT_CAM_L2,MENU_EDIT_CAM_L3,MENU_EDIT_CAM_L4},
-		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_SETUP,MENU_SETUP},
-		.cb    = { param_down,param_up, param_next, NULL,NULL},
-		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
-		.init  = param_show,
-		.cyclic = NULL,
-		.rotary= NULL //the cam edit menu uses the rotary encoder, but it's initialised in parm_show
 	},
 	{ //MENU_STORE
 		.lines = { MENU_STORE_L1,MENU_STORE_L2,MENU_STORE_L3,MENU_STORE_L4},
@@ -182,6 +159,15 @@ __flash const menu_t menues[] =
 		.cb    = { NULL,NULL,NULL,NULL,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = NULL,
+		.cyclic = NULL,
+		.rotary= NULL
+	}, //MENU_DMXADDR 
+	{
+		.lines = { MENU_LED_DMXADDR_L1,MENU_LED_DMXADDR_L2,MENU_LED_DMXADDR_L3,MENU_LED_DMXADDR_L4},
+		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
+		.cb    = { dmxaddr_auto,NULL,dmxaddr_next,NULL,NULL},
+		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
+		.init  = dmxaddr_init,
 		.cyclic = NULL,
 		.rotary= NULL
 	}

@@ -7,19 +7,18 @@
 #include "rotary.h"
 
 	typedef enum {
-		MENU_SPLASH =0,
-		MENU_MAIN = 1,
-		MENU_SETUP = 2,
-		MENU_EDIT_CAM = 3,
-		MENU_STORE = 4,
-		MENU_CLEAR = 5,
-		MENU_GENERAL_SETUP = 6,
-		MENU_RESET = 7,
-		MENU_LOCKED = 8,
-		MENU_LOCK_SETUP = 9,
-		MENU_HARDWARE = 10,
-		MENU_LED_BRIGHTNESS = 11,
-		MENU_INVALID = 255
+		MENU_SPLASH 		=0,
+		MENU_MAIN  			= 1,
+		MENU_STORE 			= 2,
+		MENU_CLEAR 			= 3,
+		MENU_GENERAL_SETUP 	= 4,
+		MENU_RESET  		= 5,
+		MENU_LOCKED 		= 6,
+		MENU_LOCK_SETUP 	= 7,
+		MENU_HARDWARE   	= 8,
+		MENU_LED_BRIGHTNESS = 9,
+		MENU_DMXADDR		= 10,
+		MENU_INVALID 		= 255
 	} menu_identifiers;
 
 

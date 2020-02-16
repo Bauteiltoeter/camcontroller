@@ -30,6 +30,8 @@ typedef struct  {
 	uint8_t focus;
 	uint8_t rotf;
 	uint8_t rot;
+	uint8_t speed;
+	uint8_t selected;
 } imagescan_data_t;
 
 typedef struct {
@@ -40,6 +42,7 @@ typedef struct {
 	uint8_t dimmer;
 	uint8_t strobe;
 	uint8_t color;
+	uint8_t selected;
 } cameotri_data_t;
 
 typedef struct {
@@ -53,6 +56,7 @@ typedef struct {
 	uint8_t dimmer;
 	uint8_t strobe;
 	uint8_t duration;
+	uint8_t selected;
 } cameoflood_data_t;
 
 typedef struct {
@@ -63,6 +67,7 @@ typedef struct {
 	uint8_t motorspeed;
 	uint8_t basiccolors;
 	uint8_t lamp;
+	uint8_t selected;
 } citycolor_data_t;
 
 

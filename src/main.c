@@ -125,7 +125,9 @@ int main (void)
 
 		//awkward delay here.. should be replaced by a timer. But it works, DMX is interrupt-driven
 		_delay_ms(0.5);
+		writeDmxOutput();
 	}
+
 }
 
 
@@ -167,6 +169,7 @@ static void writeImageScan(imagescan_data_t* data)
 	write_dmx(data->dmx_addr-1 + 5, data->pan);
 	write_dmx(data->dmx_addr-1 + 6, data->tilt>>8);
 	write_dmx(data->dmx_addr-1 + 7, data->tilt);
+	write_dmx(data->dmx_addr-1 + 8, data->speed);
 }
 
 static void writeCameoTri(cameotri_data_t* data)

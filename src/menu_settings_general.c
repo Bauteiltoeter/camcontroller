@@ -11,8 +11,8 @@ typedef struct {
 
 setting_menu_t setting_menues[] = {
 	{
-		.menu = MENU_SETUP,
-		.description = "Device setup        "
+		.menu = MENU_DMXADDR,
+		.description = "DMX Address setup   "
 	},
 	{
 		.menu = MENU_LOCKED,

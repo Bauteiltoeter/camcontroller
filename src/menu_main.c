@@ -65,6 +65,15 @@ typedef enum  {
 	citycolor = 3
 } fixture_parametersetindex;
 
+typedef enum {
+	selected_none,
+	selected_imagescan,
+	selected_tri,
+	selected_flood,
+	selected_citycolor
+} selected_status_t;
+
+static selected_status_t selected_status = selected_none;
 //uint8_t shutterValue;
 //uint8_t focusValue;
 static uint8_t active_param;
@@ -77,6 +86,9 @@ static void updateLcd(void);
 static uint8_t getCurrentIndex(void);
 static void nextFixture(void);
 static void previousFixture(void);
+static void select_pressed(void);
+static void deselectAll_pressed(void);
+static void updateSelectionLEDs(void);
 
 //static void updateImageScanShutter(void);
 //static void updateImageScanFocus(void);
@@ -122,6 +134,13 @@ const  fixture_parameter_t param_imagescan_rotf = {
 	.baseAddr = (uint8_t*)imageScan_data,
 	.arrayMemberSize = sizeof(imagescan_data_t),
 	.parameterOffset = offsetof(imagescan_data_t, rotf),
+	.parameter_type = type_uint8
+};
+
+const  fixture_parameter_t param_imagescan_speed = {
+	.baseAddr = (uint8_t*)imageScan_data,
+	.arrayMemberSize = sizeof(imagescan_data_t),
+	.parameterOffset = offsetof(imagescan_data_t, speed),
 	.parameter_type = type_uint8
 };
 
@@ -290,8 +309,8 @@ const fixture_parameterset_t fixture_parameterset[] =
 {
 	{ //imageScan
 		.name = NAME_IMAGESCAN,
-		.fname =  {			PARAM_SHUTTER, PARAM_FOCUS, PARAM_ROTF, PARAM_ROT, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-		.parameterConfig = { &param_imagescan_shutter, &param_imagescan_focus, &param_imagescan_rotf, &param_imagescan_rot, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+		.fname =  {			PARAM_SHUTTER, PARAM_FOCUS, PARAM_ROTF, PARAM_ROT, PARAM_SPEED, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+		.parameterConfig = { &param_imagescan_shutter, &param_imagescan_focus, &param_imagescan_rotf, &param_imagescan_rot, &param_imagescan_speed, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 	},
 	{ //cameo tri 
 		.name = NAME_CAMEO_TRI,
@@ -340,11 +359,14 @@ void main_run(void)
 			{
 				case FIX1: previousFixture(); break;
 				case FIX2: nextFixture(); break;
+				case FIX3: select_pressed();break;
+				case FIX4: deselectAll_pressed(); break;
 			}
 
 			//set_fixture_leds(fixture_selected);
 			updateConfig();
 			updateLcd();
+			updateSelectionLEDs();
 		}
 		lastPress = 1;
 	}
@@ -413,6 +435,60 @@ void main_run(void)
 
 }
 
+static void updateParameter(void)
+{
+	
+	switch(parameterSetIndex)
+	{
+		case imageScan: 
+			if(imageScan_data[getCurrentIndex()].selected)
+				for(uint8_t i=0; i < MOVING_FIXTURE_COUNT; i++)
+				{
+					if(imageScan_data[i].selected)
+					{
+						*get_param_u8_addr(i) = *get_param_u8_addr(getCurrentIndex());
+					}
+				}
+		break;
+		case cameo_tri:
+			if(cameotri_data[getCurrentIndex()].selected) 
+				for(uint8_t i=0; i < CAMEOTRI_FIXTURE_COUNT; i++)
+				{
+					if(cameotri_data[i].selected)
+					{
+						*get_param_u8_addr(i) = *get_param_u8_addr(getCurrentIndex());
+
+					}
+				}
+		break;
+		case cameo_flood: 
+			if(cameoflood_data[getCurrentIndex()].selected) 
+				for(uint8_t i=0; i < CAMEOFLOOD_FIXTURE_COUNT; i++)
+				{
+					if(cameoflood_data[i].selected)
+					{
+						*get_param_u8_addr(i) = *get_param_u8_addr(getCurrentIndex());
+
+					}
+				}
+		break;
+		case citycolor: 
+			if(citycolor_data[getCurrentIndex()].selected) 
+				for(uint8_t i=0; i < CITYCOLOR_FIXTURE_COUNT; i++)
+				{
+					if(citycolor_data[i].selected)
+					{
+						*get_param_u8_addr(i) = *get_param_u8_addr(getCurrentIndex());
+
+					}
+				}
+		break;
+
+	}
+
+	updateLcd();
+}
+
 
 static void updateConfig(void)
 {
@@ -421,7 +497,7 @@ static void updateConfig(void)
 		.type = rotary_uint8,
 		.min = 0,
 		.max = 255,
-		.change = updateLcd,
+		.change = updateParameter,
 		.multi = 1,
 		.wrap = 0,
 		.leds_on = 1
@@ -467,10 +543,11 @@ static void updateLcd(void)
 		lcd_puts(tmp);
 	}
 
-//	lcd_gotoxy(19,0);
-//	sprintf(tmp, "%d",parameterBank);
-//	lcd_puts(tmp);
-//	lcd_gotoxy(19,1);
+
+	lcd_gotoxy(15,0);
+	sprintf(tmp, "%d %d",imageScan_data[0].selected,imageScan_data[1].selected);
+	lcd_puts(tmp);
+	lcd_gotoxy(19,1);
 //	
 //	sprintf(tmp, "%d",active_param);
 //	lcd_puts(tmp);
@@ -536,4 +613,141 @@ void previousFixture(void)
 	
 
 
+}
+
+static void updateSelectionLEDs(void)
+{
+	uint8_t on;
+	switch(parameterSetIndex)
+	{
+		case imageScan: 
+			set_selecte_led(imageScan_data[getCurrentIndex()].selected);
+			on=0;
+			for(uint8_t i=0; i < MOVING_FIXTURE_COUNT; i++)
+			{
+				if(imageScan_data[i].selected)
+					on=1;
+			}
+			set_deselectAll_led(on);
+		break;
+		case cameo_tri: 
+			set_selecte_led(cameotri_data[getCurrentIndex()].selected);
+			on=0;
+			for(uint8_t i=0; i < CAMEOTRI_FIXTURE_COUNT; i++)
+			{
+				if(cameotri_data[i].selected)
+					on=1;
+			}
+			set_deselectAll_led(on);
+		break;
+		case cameo_flood: 
+			set_selecte_led(cameoflood_data[getCurrentIndex()].selected);
+			on=0;
+			for(uint8_t i=0; i < CAMEOFLOOD_FIXTURE_COUNT; i++)
+			{
+				if(cameoflood_data[i].selected)
+					on=1;
+			}
+			set_deselectAll_led(on);
+		break;
+		case citycolor: 
+			set_selecte_led(citycolor_data[getCurrentIndex()].selected);
+			on=0;
+			for(uint8_t i=0; i < CITYCOLOR_FIXTURE_COUNT; i++)
+			{
+				if(citycolor_data[i].selected)
+					on=1;
+			}
+			set_deselectAll_led(on);
+		break;
+	}
+}
+
+static void select_pressed(void)
+{
+	if(parameterSetIndex==imageScan)
+	{
+		selected_status=selected_imagescan;
+		if(imageScan_data[getCurrentIndex()].selected==0)
+		{
+			imageScan_data[getCurrentIndex()].selected=1;
+		}
+		else
+		{
+			imageScan_data[getCurrentIndex()].selected=0;
+		}
+	}
+	else if(parameterSetIndex==cameo_tri)
+	{
+		selected_status=selected_tri;
+		if(cameotri_data[getCurrentIndex()].selected==0)
+		{
+			cameotri_data[getCurrentIndex()].selected=1;
+		}
+		else
+		{
+			cameotri_data[getCurrentIndex()].selected=0;
+		}
+	}
+	else if(parameterSetIndex==cameo_flood)
+	{
+		selected_status=selected_flood;
+		if(cameoflood_data[getCurrentIndex()].selected==0)
+		{
+			cameoflood_data[getCurrentIndex()].selected=1;
+		}
+		else
+		{
+			cameoflood_data[getCurrentIndex()].selected=0;
+		}
+	}
+	else if(parameterSetIndex==citycolor)
+	{
+		selected_status=selected_citycolor;
+		if(citycolor_data[getCurrentIndex()].selected==0)
+		{
+			citycolor_data[getCurrentIndex()].selected=1;
+		}
+		else
+		{
+			citycolor_data[getCurrentIndex()].selected=0;
+		}
+	}
+
+	updateSelectionLEDs();
+}
+
+static void deselectAll_pressed(void)
+{
+	switch(parameterSetIndex)
+	{
+		case imageScan: 
+			for(uint8_t i=0; i < MOVING_FIXTURE_COUNT; i++)
+			{
+				imageScan_data[i].selected=0;
+			}
+		break;
+		case cameo_tri: 
+			for(uint8_t i=0; i < CAMEOTRI_FIXTURE_COUNT; i++)
+			{
+				cameotri_data[i].selected=0;
+			}
+		break;
+		case cameo_flood: 
+			for(uint8_t i=0; i < CAMEOFLOOD_FIXTURE_COUNT; i++)
+			{
+				cameoflood_data[i].selected=0;
+			}
+		break;
+		case citycolor: 
+			for(uint8_t i=0; i < CITYCOLOR_FIXTURE_COUNT; i++)
+			{
+				citycolor_data[i].selected=0;
+			}
+		break;
+		
+
+	}
+
+	updateSelectionLEDs();
 }

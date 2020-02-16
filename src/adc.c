@@ -53,7 +53,7 @@ int16_t axis_offset(uint8_t channel, uint16_t scaling)
 	////lcd_puts(tmp);
 
 
-	if(value < -10 || value > 10)
+	if(value < -15 || value > 15)
 	{
 		value/=scaling;
 

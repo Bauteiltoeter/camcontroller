@@ -270,33 +270,6 @@ fselkey_t get_fselkeys(void)
     return FSEL_NO_KEY;
 }
 
-void set_fixture_leds(uint8_t active)
-{
-	switch(active)
-	{
-		case 0: max7221_set_led(LED_CAMSEL_1);
-				max7221_reset_led(LED_CAMSEL_2);
-				max7221_reset_led(LED_CAMSEL_3);
-				max7221_reset_led(LED_CAMSEL_4);
-		break;
-		case 1: max7221_reset_led(LED_CAMSEL_1);
-				max7221_set_led(LED_CAMSEL_2);
-				max7221_reset_led(LED_CAMSEL_3);
-				max7221_reset_led(LED_CAMSEL_4);
-		break;
-		case 2: max7221_reset_led(LED_CAMSEL_1);
-				max7221_reset_led(LED_CAMSEL_2);
-				max7221_set_led(LED_CAMSEL_3);
-				max7221_reset_led(LED_CAMSEL_4);
-		break;
-		case 3: max7221_reset_led(LED_CAMSEL_1);
-				max7221_reset_led(LED_CAMSEL_2);
-				max7221_reset_led(LED_CAMSEL_3);
-				max7221_set_led(LED_CAMSEL_4);
-		break;
-	}
-}
-
 void set_rotarys_leds(uint8_t number)
 {
     static const uint8_t cathodes[] = { 4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3};
@@ -407,4 +380,22 @@ void set_bank_led(uint8_t on)
 		max7221_reset_led(LED_FSEL_8);
 	}
 	
+}
+
+
+void set_selecte_led(uint8_t on)
+{
+	if(on)
+		max7221_set_led(LED_CAMSEL_3);
+	else
+		max7221_reset_led(LED_CAMSEL_3);
+}
+
+void set_deselectAll_led(uint8_t on)
+{
+	if(on)
+		max7221_set_led(LED_CAMSEL_4);
+	else
+		max7221_reset_led(LED_CAMSEL_4);
+
 }
