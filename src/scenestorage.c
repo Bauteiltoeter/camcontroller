@@ -2,16 +2,7 @@
 #include "globals.h"
 #include "scenestorage.h"
 #include <string.h>
-typedef struct {
-    imagescan_data_t imagescan[MOVING_FIXTURE_COUNT];
-    cameotri_data_t cameotri[CAMEOTRI_FIXTURE_COUNT];
-    cameoflood_data_t cameoflood[CAMEOFLOOD_FIXTURE_COUNT];
-    citycolor_data_t citycolor[CITYCOLOR_FIXTURE_COUNT];
 
-    uint8_t scenInactive;
-    uint8_t crossfade;
-    uint8_t timing;
-} scene_t;
 
 scene_t scens[SCENE_COUNT] EEMEM;
 
@@ -103,4 +94,9 @@ void scenestorage_setTiming(uint8_t index, uint8_t timing)
 void scenestorage_setCrossfade(uint8_t index, uint8_t crossfade)
 {
     eeprom_write_byte(&scens[index].crossfade,crossfade);
+}
+
+void scenestorage_getScene(uint8_t index, scene_t* scene)
+{
+    eeprom_read_block(scene, &scens[index],sizeof(scene_t));
 }
