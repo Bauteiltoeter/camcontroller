@@ -1,0 +1,21 @@
+---------------------------------------------------------------------------
+NCDrill File Report For: CamController3.PcbDoc   15.09.2017  20:50:39
+---------------------------------------------------------------------------
+
+Layer Pair : Top Layer to Bottom Layer
+ASCII RoundHoles File : CamController3.TXT
+
+Tool         Hole Size           Hole Type     Hole Count Plated       Tool Travel
+---------------------------------------------------------------------------
+T1        19.68mil (0.49987mm)     Round          51               19.80 Inch (502.89 mm)
+T2        23.62mil (0.59995mm)     Round          24               3.60 Inch (91.44 mm)
+T3        27.56mil (0.70002mm)     Round          2                0.08 Inch (2.00 mm)
+T4        31.5mil (0.8001mm)       Round          3                0.30 Inch (7.62 mm)
+T5        39.37mil (1mm)           Round          25               6.35 Inch (161.36 mm)
+T6        43.31mil (1.10007mm)     Round          162              30.22 Inch (767.55 mm)
+T7        94.49mil (2.40005mm)     Round          2                0.47 Inch (12.04 mm)
+T8        125.98mil (3.19989mm)    Round          4                12.10 Inch (307.28 mm)
+---------------------------------------------------------------------------
+Totals                                            273              72.92 Inch (1852.18 mm)
+
+Total Processing Time (hh:mm:ss) : 00:00:00

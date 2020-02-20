@@ -8,3 +8,6 @@
 *.sym
 *.o
 .dep/*
+hardware/Project Logs*
+hardware/__Previews
+hardware/History
