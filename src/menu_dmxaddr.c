@@ -2,6 +2,8 @@
 #include "lcd.h"
 #include "globals.h"
 #include "rotary.h"
+#include <avr/eeprom.h>
+
 typedef struct {
     uint16_t* dmx_addr;
     char* name;
@@ -89,10 +91,11 @@ void dmxaddr_updateValue();
 rotary_config_t dmxaddr_rotary = {
 	.data_u16 = 0,
 	.type = rotary_uint16,
-	.min = 1,
+	.min = 0,
 	.max = 512,
 	.change = dmxaddr_updateValue,
 	.multi = 1,
+    .fastMulti = 10,
 	.wrap = 1,
 	.leds_on = 1
 };
@@ -109,6 +112,8 @@ void dmxaddr_init(void)
 
     dmxaddr_rotary.data_u16=dmx_setup[currentDevice].dmx_addr;
     rotary_setconfig(&dmxaddr_rotary);
+
+
 }
 
 
@@ -148,7 +153,10 @@ void dmxaddr_updateValue()
 {
     lcd_gotoxy(9,2);
     char tmp[20];
-    sprintf(tmp,"%03d",*(dmx_setup[currentDevice].dmx_addr));
+    if((*dmx_setup[currentDevice].dmx_addr!=0))
+        sprintf(tmp,"%03d     ",*(dmx_setup[currentDevice].dmx_addr));
+    else
+        sprintf(tmp,"Disabled");
     lcd_puts(tmp);
 }
 
@@ -163,6 +171,25 @@ void dmxaddr_auto(void)
     }
 
     dmxaddr_updateValue();
-    
+}
 
+uint16_t dmxaddress[DMX_SETUP_SIZE] EEMEM;
+
+
+void dmxaddr_save(void)
+{
+    for(uint8_t i = 0; i < DMX_SETUP_SIZE; i++)
+    {
+        eeprom_write_word(&dmxaddress[i], *dmx_setup[i].dmx_addr);    
+    }
+
+}
+
+
+void dmxaddr_load(void)
+{
+    for(uint8_t i = 0; i < DMX_SETUP_SIZE; i++)
+    {
+        *dmx_setup[i].dmx_addr = eeprom_read_word(&dmxaddress[i]);    
+    }
 }

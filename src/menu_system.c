@@ -156,7 +156,7 @@ __flash const menu_t menues[] =
 	{
 		.lines = { MENU_LED_DMXADDR_L1,MENU_LED_DMXADDR_L2,MENU_LED_DMXADDR_L3,MENU_LED_DMXADDR_L4},
 		.next  = { MENU_INVALID,MENU_INVALID,MENU_INVALID,MENU_MAIN,MENU_INVALID},
-		.cb    = { dmxaddr_auto,NULL,dmxaddr_next,NULL,NULL},
+		.cb    = { dmxaddr_auto,NULL,dmxaddr_next,dmxaddr_save,NULL},
 		.cb_r=   { NULL,NULL,NULL,NULL,NULL},
 		.init  = dmxaddr_init,
 		.cyclic = NULL,

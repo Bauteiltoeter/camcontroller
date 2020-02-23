@@ -74,26 +74,26 @@ uint8_t scenestorage_hasData(uint8_t index)
 }
 
 
-uint8_t scenestorage_getTiming(uint8_t index)
+uint16_t scenestorage_getTiming(uint8_t index)
 {
-    return eeprom_read_byte(&scens[index].timing);
+    return eeprom_read_word(&scens[index].timing);
 }
 
-uint8_t scenestorage_getCrossfade(uint8_t index)
+uint16_t scenestorage_getCrossfade(uint8_t index)
 {
 
-    return eeprom_read_byte(&scens[index].crossfade);
+    return eeprom_read_word(&scens[index].crossfade);
 }
 
 
-void scenestorage_setTiming(uint8_t index, uint8_t timing)
+void scenestorage_setTiming(uint8_t index, uint16_t timing)
 {
-    eeprom_write_byte(&scens[index].timing,timing);
+    eeprom_write_word(&scens[index].timing,timing);
 }
 
-void scenestorage_setCrossfade(uint8_t index, uint8_t crossfade)
+void scenestorage_setCrossfade(uint8_t index, uint16_t crossfade)
 {
-    eeprom_write_byte(&scens[index].crossfade,crossfade);
+    eeprom_write_word(&scens[index].crossfade,crossfade);
 }
 
 void scenestorage_getScene(uint8_t index, scene_t* scene)

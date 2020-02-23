@@ -13,6 +13,7 @@ rotary_config_t rotary_scenes_menu = {
 	.max = SCENE_COUNT-1,
 	.change = updateLcd,
 	.multi = 1,
+    .fastMulti = 2,
 	.wrap = 1,
 	.leds_on = 1
 };

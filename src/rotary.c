@@ -84,14 +84,16 @@ void rotary_process(void)
 	{
 		buttonWasPressed=0;
 	}
-	
+	static uint8_t pulseWithrelease= 0;
 
 	if(current_config!=NULL &&( diff!=0 || buttonPressed==1))
 	{
 		diff = diff * current_config->multi;
 
-		
+		if(pulseWithrelease < 2)
+			diff=diff*current_config->fastMulti;
 
+		pulseWithrelease=0;
 		switch(current_config->type)
 		{
 			case rotary_uint8: tmp = *(current_config->data_u8)+(int16_t)diff; 
@@ -132,7 +134,14 @@ void rotary_process(void)
 
 
 								if(buttonPressed)
-									tmp=65535;
+								{	if(tmp <current_config->max/2)
+										tmp=current_config->max/2;
+									else if(tmp < current_config->max)
+										tmp=current_config->max;
+									else
+										tmp=current_config->min;
+									
+								}
 
 								*(current_config->data_u16)=tmp;
 
@@ -152,6 +161,12 @@ void rotary_process(void)
 			set_rotarys_leds(0);
 		}	
 	}
+	else
+	{
+		if(pulseWithrelease < 255)
+			pulseWithrelease++;
+	}
+	
 }
 
 static void calc_number_of_leds(int32_t tmp)

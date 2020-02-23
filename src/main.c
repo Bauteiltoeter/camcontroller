@@ -69,6 +69,7 @@ int main (void)
 		set_menu(MENU_SPLASH);
 	}
 
+	dmxaddr_load();
 	dmx_init();
 	ADC_Init();
 	rotary_init();

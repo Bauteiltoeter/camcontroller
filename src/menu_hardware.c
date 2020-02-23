@@ -24,7 +24,7 @@ void show_hardware_info(void)
 	static uint8_t up=1;
 	
 	set_rotarys_leds(i);
-	
+
 	if(up)
 	{
 		i++;

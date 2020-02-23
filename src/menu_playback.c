@@ -5,9 +5,9 @@
 uint8_t seconds;
 uint8_t activeScene;
 uint8_t nextScene;
-uint16_t activeTotalTime;
-uint8_t activeTiming;
-uint8_t activeCrossfade;
+uint32_t activeTotalTime;
+uint16_t activeTiming;
+uint16_t activeCrossfade;
 uint8_t disable;
 uint8_t numberOfScenes;
 uint8_t nextSceneIndex;
@@ -66,11 +66,11 @@ void playback_update()
 
 
     if(activeTiming > 0)
-    {   if(ms>100)
+    {   if(ms>10)
         {
             activeTiming--;
             lcd_gotoxy(0,2);
-            sprintf(tmp,"Seconds remain: %03d",activeTiming);
+            sprintf(tmp,"Remain: %6u.%1us",activeTiming/10, activeTiming%10);
             lcd_puts(tmp);
         }
     }
@@ -79,17 +79,17 @@ void playback_update()
         if(activeCrossfade > 0)
         {
             crossfade_calculate();
-            if(ms>100)
+            if(ms>10)
             {
                 activeCrossfade--;
                 lcd_gotoxy(0,2);
-                sprintf(tmp,"Seconds crossf: %03d",activeCrossfade);
+                sprintf(tmp,"Crossf: %6u.%1us",activeCrossfade/10, activeCrossfade%10);
                 lcd_puts(tmp);
             }
         }
         else
         {
-            if(ms>100)
+            if(ms>10)
             {
                 //Load next
                 activeScene= nextScene;
@@ -105,10 +105,10 @@ void playback_update()
                 activeCrossfade = scenestorage_getCrossfade(activeScene);
                 activeTiming = scenestorage_getTiming(activeScene);
                 lcd_gotoxy(14,1);
-                sprintf(tmp,"%d/%d:%d",activeScene+1,numberOfScenes,nextScene);
+                sprintf(tmp,"%d/%d",activeScene+1,numberOfScenes);
                 lcd_puts(tmp);
                 lcd_gotoxy(0,2);
-                sprintf(tmp,"Seconds remain: %03d",activeTiming);
+                sprintf(tmp,"Remain: %6u.%1us",activeTiming/10, activeTiming%10);
                 lcd_puts(tmp);
                 crossfade_init();
             }
@@ -116,7 +116,7 @@ void playback_update()
             
     }
 
-    if(ms>100)
+    if(ms>10)
         ms=0;
 }
 
@@ -227,7 +227,7 @@ void crossfade_init(void)
 
     for(uint8_t i=0; i < CROSSFADE_U8_SIZE; i++)
     {
-        crossfade_u8[i].step = (*crossfade_u8[i].next- (float)(*crossfade_u8[i].dmx)) / (float)(scenestorage_getCrossfade(activeScene)*100.0);
+        crossfade_u8[i].step = (*crossfade_u8[i].next- (float)(*crossfade_u8[i].dmx)) / (float)(scenestorage_getCrossfade(activeScene)*10.0);
         crossfade_u8[i].value = *crossfade_u8[i].dmx;
     }
 

@@ -80,6 +80,7 @@ static uint8_t active_param;
 static uint8_t fixture_selected;
 static fixture_parametersetindex parameterSetIndex = imageScan;
 static uint8_t parameterBank=0;
+static uint8_t noFixtures;
 
 static void updateConfig(void);
 static void updateLcd(void);
@@ -335,8 +336,31 @@ const fixture_parameterset_t fixture_parameterset[] =
 
 void main_init(void)
 {
-	main_show();
 	//parameterSetIndex = imageScan;
+
+	uint8_t counter=0;
+	uint8_t invalid=0;
+	noFixtures=0;
+
+
+	do
+	{
+		switch(parameterSetIndex)
+		{
+			case imageScan: invalid = imageScan_data[getCurrentIndex()].dmx_addr==0; break;
+			case cameo_tri: invalid = cameotri_data[getCurrentIndex()].dmx_addr==0; break;
+			case cameo_flood: invalid = cameoflood_data[getCurrentIndex()].dmx_addr==0; break;
+			case citycolor: invalid = citycolor_data[getCurrentIndex()].dmx_addr==0; break;
+		}
+		counter++;
+		if(counter > 1)
+			nextFixture(); 	
+	}
+	while(invalid && counter < 200);
+
+	if(counter >= 200)
+		noFixtures=1;
+	main_show();
 }
 
 void main_show(void)
@@ -349,16 +373,46 @@ void main_show(void)
 
 void main_run(void)
 {
+	if(noFixtures)
+		return;
+
 	fixturekey_t fixsel = get_fixturekeys();
 	static uint8_t lastPress = 0;
+	uint8_t invalid=0;
 	if(fixsel != FIX_NO_KEY)
 	{
 		if(!lastPress)
 		{
 			switch(fixsel)
 			{
-				case FIX1: previousFixture(); break;
-				case FIX2: nextFixture(); break;
+				case FIX1:
+					do
+					{
+						previousFixture(); 
+						switch(parameterSetIndex)
+						{
+							case imageScan: invalid = imageScan_data[getCurrentIndex()].dmx_addr==0; break;
+							case cameo_tri: invalid = cameotri_data[getCurrentIndex()].dmx_addr==0; break;
+							case cameo_flood: invalid = cameoflood_data[getCurrentIndex()].dmx_addr==0; break;
+							case citycolor: invalid = citycolor_data[getCurrentIndex()].dmx_addr==0; break;
+						}
+					}
+					while(invalid);
+				break;
+				case FIX2: 
+					do
+					{
+						nextFixture(); 
+						switch(parameterSetIndex)
+						{
+							case imageScan: invalid = imageScan_data[getCurrentIndex()].dmx_addr==0; break;
+							case cameo_tri: invalid = cameotri_data[getCurrentIndex()].dmx_addr==0; break;
+							case cameo_flood: invalid = cameoflood_data[getCurrentIndex()].dmx_addr==0; break;
+							case citycolor: invalid = citycolor_data[getCurrentIndex()].dmx_addr==0; break;
+						}
+					}
+					while(invalid);
+				break;
 				case FIX3: select_pressed();break;
 				case FIX4: deselectAll_pressed(); break;
 			}
@@ -416,7 +470,7 @@ void main_run(void)
 	else if( (int32_t)imageScan_data[activeImageScan].pan+diff < 0)
 			imageScan_data[activeImageScan].pan=0;
 	else
-			imageScan_data[activeImageScan].pan+=diff      ;
+			imageScan_data[activeImageScan].pan+=diff;
 
 	//fetch joystick deflection and calculate new tilt
 	diff = -axis_offset(1, 2);
@@ -428,7 +482,7 @@ void main_run(void)
 	else if( (int32_t)imageScan_data[activeImageScan].tilt+diff < 0)
 			imageScan_data[activeImageScan].tilt=0;
 	else
-			imageScan_data[activeImageScan].tilt+=diff     ;
+			imageScan_data[activeImageScan].tilt+=diff;
 
 	if(lcdUpdate)
  	   updateLcd();
@@ -499,6 +553,7 @@ static void updateConfig(void)
 		.max = 255,
 		.change = updateParameter,
 		.multi = 1,
+		.fastMulti = 1,
 		.wrap = 0,
 		.leds_on = 1
 	};
@@ -510,6 +565,14 @@ static void updateConfig(void)
 
 static void updateLcd(void)
 {
+
+	if(noFixtures)
+	{
+		lcd_gotoxy(5,1);
+		lcd_puts("NO FIXTURES");
+		return;
+	}
+
 	lcd_gotoxy(0,0);
 	lcd_puts("                    ");
 	lcd_gotoxy(0,0);
@@ -542,6 +605,12 @@ static void updateLcd(void)
 		sprintf(tmp, "%u:%u        ",imageScan_data[getCurrentIndex()].pan,imageScan_data[getCurrentIndex()].tilt);
 		lcd_puts(tmp);
 	}
+	else
+	{
+		lcd_gotoxy(0,2);
+		lcd_puts("                    ");
+	}
+	
 
 
 //	
@@ -573,6 +642,7 @@ uint8_t getCurrentIndex(void)
 
 void nextFixture(void)
 {
+
 	fixture_selected++; 
 	
 	if(fixture_selected >= TOTAL_FIXTURE_COUNT)
@@ -586,7 +656,8 @@ void nextFixture(void)
 	else if (fixture_selected < MOVING_FIXTURE_COUNT + CAMEOTRI_FIXTURE_COUNT + CAMEOFLOOD_FIXTURE_COUNT)
 		parameterSetIndex = cameo_flood;
 	else
-		parameterSetIndex = citycolor;
+	parameterSetIndex = citycolor;
+
 
 }
 

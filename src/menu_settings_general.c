@@ -40,6 +40,7 @@ rotary_config_t rotary_menu_settings_general = {
 	.max = (sizeof(setting_menues)/sizeof(setting_menu_t))-1,
 	.change = setup_menu_show,
 	.multi = 1,
+	.fastMulti = 1,
 	.wrap = 1,
 	.leds_on = 0
 };

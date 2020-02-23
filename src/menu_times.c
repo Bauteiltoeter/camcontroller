@@ -4,8 +4,8 @@
 #include "scenestorage.h"
 #include "lcd.h"
 #include "rotary.h"
-uint8_t currentTiming;
-uint8_t currentCrossfade;
+uint16_t currentTiming;
+uint16_t currentCrossfade;
 uint8_t currentSelection;
 uint8_t currentScene;
 
@@ -15,12 +15,13 @@ static void nextScene(void);
 static void loadScene(void);
 
 static rotary_config_t rotconfig = {
-    .data_u8 = 0,
-    .type = rotary_uint8,
+    .data_u16 = 0,
+    .type = rotary_uint16,
     .min = 0,
-    .max = 255,
+    .max = 6000,
     .change = updateLcd,
     .multi = 1,
+    .fastMulti = 20,
     .wrap = 0,
     .leds_on = 1
 };
@@ -32,7 +33,7 @@ void times_init(void)
     currentScene=0;
     updateLcd();
 
-    rotconfig.data_u8 = &currentCrossfade;
+    rotconfig.data_u16 = &currentCrossfade;
     rotary_setconfig(&rotconfig);
 
 }
@@ -99,11 +100,11 @@ static void updateLcd(void)
     if(scenestorage_hasData(currentScene))
     {
         lcd_gotoxy(1,1);
-        sprintf(tmp,"Crossfade: %3ds", currentCrossfade);
+        sprintf(tmp,"Cross: %6u.%01us", currentCrossfade/10, currentCrossfade%10);
         lcd_puts(tmp);
 
         lcd_gotoxy(1,2);
-        sprintf(tmp,"Timing: %3ds", currentTiming);
+        sprintf(tmp,"Time %6u.%01us", currentTiming/10, currentTiming%10);
         lcd_puts(tmp);
     }
     else
@@ -123,7 +124,7 @@ void times_cross(void)
 {
     currentSelection=0;
 
-    rotconfig.data_u8 = &currentCrossfade;
+    rotconfig.data_u16 = &currentCrossfade;
     rotary_setconfig(&rotconfig);
     updateLcd();
 }
@@ -132,7 +133,7 @@ void times_time(void)
 {
     currentSelection=1;
 
-    rotconfig.data_u8 = &currentTiming;
+    rotconfig.data_u16 = &currentTiming;
     rotary_setconfig(&rotconfig);
     updateLcd();
 }
