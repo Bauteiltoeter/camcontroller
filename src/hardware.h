@@ -33,7 +33,7 @@
 		CAM1 = 0,
 		CAM2 = 1,
 		CAM3 = 2,
-		CAM4 = 3
+		CAMSHIFT = 3
 	} camkey_t;
 
 	typedef enum {
@@ -61,7 +61,7 @@
 	uint8_t get_cam1_key(void);
 	void set_store_led(uint8_t led);
 	void reset_store_led(uint8_t led);
-	void set_cam_leds(uint8_t active);
+	void set_cam_leds(void);
     void set_fsel_leds(uint8_t function);
 	void set_rotarys_leds(uint8_t number);
 	uint8_t get_matrix_line(uint8_t line);

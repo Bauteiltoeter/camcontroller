@@ -2,12 +2,12 @@
 #include <stdint.h>
 #include "uart.h"
 #include "dmx.h"
-void artnet_init()
+void artnet_init(void)
 {
     //we do not need to initialise uart2 because it's initialized in tally.c
 }
 
-void artnet_tick()
+void artnet_tick(void)
 {
     static uint8_t i=0;
 

@@ -5,4 +5,5 @@ void menu_tally_init(void);
 void menu_tally_auto(void);
 void menu_tally_yellow(void);
 void menu_tally_blue(void);
+void menu_tally_run(void);
 #endif

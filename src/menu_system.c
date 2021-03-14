@@ -258,7 +258,7 @@ __flash const menu_t menues[] =
         .cb    = { menu_tally_auto,menu_tally_yellow,menu_tally_blue,NULL,NULL},
         .cb_r=   { NULL,NULL,NULL,NULL,NULL},
         .init  = menu_tally_init,
-        .cyclic = NULL,
+        .cyclic = menu_tally_run,
         .rotary= NULL
     }
 };

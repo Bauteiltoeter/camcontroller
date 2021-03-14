@@ -12,8 +12,15 @@
 
 #include <stdint.h>
 
-#define CAM_COUNT 4 	//!< Number of cameras in the system
+#define CAM_COUNT 6 	//!< Number of cameras in the system
 #define STORE_COUNT 4 	//!< Number of stores for each cam
+
+typedef enum 
+{
+    tally_auto,
+    tally_blue,
+    tally_yellow
+} tally_mode_t;
 
 /**
  * \struct cam_data_t 
@@ -43,9 +50,12 @@ typedef struct  {
     int8_t zoom;
 	uint8_t tally;
 	uint8_t lockMove;
+	tally_mode_t tally_mode;
+	uint8_t tally_id;
 } cam_data_t;
 
 extern cam_data_t cams[CAM_COUNT];	//!< global array to store the configuration data for each cam
 extern uint8_t active_cam; 		//!< global variable that contains the number of the currently manipulated camera
 extern uint8_t active_rotary_funtion;
+extern uint8_t shift_active;
 #endif

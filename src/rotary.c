@@ -69,7 +69,7 @@ void rotary_setconfig(rotary_config_t* config)
 void rotary_process(void)
 {
 	int8_t diff = encode_read();
-	int32_t tmp;
+	int32_t tmp=0;
 
 	if(diff!=0 && current_config!=NULL)
 	{

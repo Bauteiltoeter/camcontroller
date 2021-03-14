@@ -10,5 +10,14 @@
         "tuple": "c",
         "type_traits": "c",
         "utility": "c"
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/*.o": true,
+        "**/*.lst": true,
+        "**/.DS_Store": true
     }
 }

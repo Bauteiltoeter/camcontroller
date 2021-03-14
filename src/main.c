@@ -17,8 +17,8 @@
 #include "menu_cam_ctrl.h"
 #include "globals.h"
 #include "cccb.h"
-
-
+#include "tally.h"
+#include "artnet.h"
 
 
 void store_clear(void);
@@ -31,8 +31,7 @@ void load_default(void);
 void lock_system(void);
 void unlock_system(void);
 
-
-
+void send_switch_state(uint8_t cam);
 
 //###########################
 //  Global variables
@@ -61,7 +60,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.button_state = 0,
 		.power_state = 1,
 		.tally = 0,
-		.lockMove = 1
+		.lockMove = 1,
+		.tally_mode = tally_auto,
+		.tally_id = 1
 	},	
 	{
 		.cam_active = 1,
@@ -82,7 +83,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.button_state = 0,
 		.power_state = 1,
 		.tally = 0,
-		.lockMove = 1
+		.lockMove = 1,
+		.tally_mode = tally_auto,
+		.tally_id = 2
 	},
 	{
 		.cam_active = 1,
@@ -103,7 +106,9 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
 		.button_state = 0,
 		.power_state = 1,
 		.tally = 0,
-		.lockMove = 1
+		.lockMove = 1,
+		.tally_mode = tally_auto,
+		.tally_id = 3
 
 	},
 	{
@@ -126,7 +131,57 @@ const cam_data_t cams_default[CAM_COUNT] PROGMEM =
         .power_state = 1,
         .focus = 500,
         .iris=0,
-		.tally=0
+		.tally=0,
+		.tally_mode = tally_auto,
+		.tally_id = 4
+	},
+	{
+        .cam_active = 1,
+		.base_addr = 0xFFFF,
+		.pan_address = 0xFFFF,
+		.tilt_address = 0xFFFF,
+		.speed_address = 0xFFFF,
+		.switch_address = 0xFFFF,
+		.pan_invert = 0xFF,
+		.tilt_invert=0xFF,
+		.pan_scaling = 0xFFFF,
+		.tilt_scaling = 0xFFFF,
+		.pan = 0xFF, 
+		.tilt = 0xFF,
+		.speed = 0xFF,
+		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.button_state = 0,
+        .power_state = 1,
+        .focus = 500,
+        .iris=0,
+		.tally=0,
+		.tally_mode = tally_auto,
+		.tally_id = 5
+	} ,
+	{
+        .cam_active = 1,
+		.base_addr = 0xFFFF,
+		.pan_address = 0xFFFF,
+		.tilt_address = 0xFFFF,
+		.speed_address = 0xFFFF,
+		.switch_address = 0xFFFF,
+		.pan_invert = 0xFF,
+		.tilt_invert=0xFF,
+		.pan_scaling = 0xFFFF,
+		.tilt_scaling = 0xFFFF,
+		.pan = 0xFF, 
+		.tilt = 0xFF,
+		.speed = 0xFF,
+		.store_pan = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.store_tilt= { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
+		.button_state = 0,
+        .power_state = 1,
+        .focus = 500,
+        .iris=0,
+		.tally=0,
+		.tally_mode = tally_auto,
+		.tally_id = 6
 	} 
 };
 
@@ -165,7 +220,7 @@ int main (void)
 //
 	send_switch();
 
-	set_cam_leds(active_cam);
+	set_cam_leds();
 
 	for(uint8_t i=0; i < CAM_COUNT; i++)
 	{
@@ -256,24 +311,24 @@ void 	process_inputs(void)
 {
 	//Fetch keypress from hardware
 	camkey_t keys = get_camkeys();
-
+	static uint8_t shift_lock=0;
 
 
     //Change the activ  e cam
 	switch(keys)
 	{
-		case CAM1: active_cam = cams[0].cam_active ? 0 : active_cam; break;
-		case CAM2: active_cam = cams[1].cam_active ? 1 : active_cam; break; 
-		case CAM3: active_cam = cams[2].cam_active ? 2 : active_cam; break;
-		case CAM4: active_cam = cams[3].cam_active ? 3 : active_cam; break;
-		default: break;
+		case CAM1: active_cam = cams[0].cam_active ? (shift_active?3+0:0) : active_cam; break;
+		case CAM2: active_cam = cams[1].cam_active ? (shift_active?3+1:1) : active_cam; break; 
+		case CAM3: active_cam = cams[2].cam_active ? (shift_active?3+2:2) : active_cam; break;
+		case CAMSHIFT: if(!shift_lock) { shift_lock=1; shift_active = shift_active ? 0 : 1; } break;
+		default: shift_lock=0; break;
 	}
 
 	//update stuff if the cam changed
 	if(keys != CAM_NO_KEY)
 	{
 		//camera leds
-		set_cam_leds(active_cam);
+		set_cam_leds();
 
 		update_leds();
 
@@ -406,6 +461,7 @@ void 	process_inputs(void)
             case FSEL2: active_rotary_funtion=1; break;
             case FSEL3: active_rotary_funtion=2; break;
             case FSEL4: active_rotary_funtion=3; break;
+			default: break;
             }
 
             set_fsel_leds(fsel);

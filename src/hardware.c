@@ -1,5 +1,6 @@
 #include "hardware.h"
 #include "max7221.h"
+#include "globals.h"
 #include <avr/io.h>
 #include <util/delay.h>
 
@@ -144,7 +145,7 @@ camkey_t get_camkeys(void)
 	if(CAMKEY_3)
 		return CAM3;
 	if(CAMKEY_4)
-		return CAM4;
+		return CAMSHIFT;
 	return CAM_NO_KEY;
 }
 
@@ -301,31 +302,58 @@ void reset_store_led(uint8_t led)
 	}
 }
 
-void set_cam_leds(uint8_t active)
+void set_cam_leds(void)
 {
-	switch(active)
+	if(shift_active)
 	{
-		case 0: max7221_set_led(LED_CAMSEL_1);
-				max7221_reset_led(LED_CAMSEL_2);
-				max7221_reset_led(LED_CAMSEL_3);
-				max7221_reset_led(LED_CAMSEL_4);
-		break;
-		case 1: max7221_reset_led(LED_CAMSEL_1);
-				max7221_set_led(LED_CAMSEL_2);
-				max7221_reset_led(LED_CAMSEL_3);
-				max7221_reset_led(LED_CAMSEL_4);
-		break;
-		case 2: max7221_reset_led(LED_CAMSEL_1);
-				max7221_reset_led(LED_CAMSEL_2);
-				max7221_set_led(LED_CAMSEL_3);
-				max7221_reset_led(LED_CAMSEL_4);
-		break;
-		case 3: max7221_reset_led(LED_CAMSEL_1);
-				max7221_reset_led(LED_CAMSEL_2);
-				max7221_reset_led(LED_CAMSEL_3);
-				max7221_set_led(LED_CAMSEL_4);
-		break;
+		max7221_set_led(LED_CAMSEL_4);
+
+		switch(active_cam)
+		{
+			case 3: max7221_set_led(LED_CAMSEL_1);
+					max7221_reset_led(LED_CAMSEL_2);
+					max7221_reset_led(LED_CAMSEL_3);
+			break;
+			case 4: max7221_reset_led(LED_CAMSEL_1);
+					max7221_set_led(LED_CAMSEL_2);
+					max7221_reset_led(LED_CAMSEL_3);
+			break;
+			case 5: max7221_reset_led(LED_CAMSEL_1);
+					max7221_reset_led(LED_CAMSEL_2);
+					max7221_set_led(LED_CAMSEL_3);
+			break;
+			default: max7221_reset_led(LED_CAMSEL_1);
+					max7221_reset_led(LED_CAMSEL_2);
+					max7221_reset_led(LED_CAMSEL_3);
+			break;
+		}
 	}
+	else
+	{
+		max7221_reset_led(LED_CAMSEL_4);
+		switch(active_cam)
+		{
+			case 0: max7221_set_led(LED_CAMSEL_1);
+					max7221_reset_led(LED_CAMSEL_2);
+					max7221_reset_led(LED_CAMSEL_3);
+			break;
+			case 1: max7221_reset_led(LED_CAMSEL_1);
+					max7221_set_led(LED_CAMSEL_2);
+					max7221_reset_led(LED_CAMSEL_3);
+			break;
+			case 2: max7221_reset_led(LED_CAMSEL_1);
+					max7221_reset_led(LED_CAMSEL_2);
+					max7221_set_led(LED_CAMSEL_3);
+			break;
+			default: max7221_reset_led(LED_CAMSEL_1);
+					max7221_reset_led(LED_CAMSEL_2);
+					max7221_reset_led(LED_CAMSEL_3);
+			break;
+		}
+	}
+
+	
+
 }
 
 void set_rotarys_leds(uint8_t number)

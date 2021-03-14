@@ -3,13 +3,6 @@
 
 typedef enum 
 {
-    tally_auto,
-    tally_blue,
-    tally_yellow
-} tally_mode_t;
-
-typedef enum 
-{
     rf_ok,
     rf_error_neko,
     rf_error_com,
@@ -17,10 +10,11 @@ typedef enum
 
 } tally_rf_status_t;
 
-void tally_init();
-void tally_tick();
-void tally_setAcleauto();
-void tally_setYellow();
-void tally_setBlue();
-tally_mode_t tally_getMode();
+void tally_init(void);
+void tally_tick(void);
+void tally_setAuto(void);
+void tally_setAcleauto(void);
+void tally_setYellow(void);
+void tally_setBlue(void);
+//tally_mode_t tally_getMode();
 #endif

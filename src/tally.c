@@ -18,18 +18,16 @@ typedef enum
     blue
 } tally_color_t;
 
-tally_mode_t tally_mode = tally_auto;
 tally_rf_status_t tally_rf_status = rf_wait;
 
-uint8_t cam5_tally=0;
 
-void tally_update();
-void tally_sendRGB(uint8_t r, uint8_t g, uint8_t b);
+void tally_update(void);
+void tally_sendRGB(uint8_t id, uint8_t r, uint8_t g, uint8_t b);
 void tally_process(uint8_t c);
 void tally_rf_process(uint8_t c);
 
 
-void tally_init()
+void tally_init(void)
 {
     uart2_init(UART_BAUD_SELECT(9600,F_CPU) ); //UART for vMIX communication
     uart1_init(UART_BAUD_SELECT(9600,F_CPU) ); //UART for wireless module
@@ -43,9 +41,9 @@ void tally_init()
 
 
 
-void tally_setColor(tally_color_t color);
+void tally_setColor(uint8_t id, tally_color_t color);
 
-void tally_tick()
+void tally_tick(void)
 {
     unsigned int c = uart2_getc();
     if ( c & UART_NO_DATA )
@@ -159,7 +157,7 @@ void tally_rf_process(uint8_t c)
                 {
                     tally_rf_status = rf_ok;
                 }
-                else if(buffer[0] = 'E')
+                else if(buffer[0] == 'E')
                 {
                     tally_rf_status = rf_error_neko;
                 }
@@ -183,7 +181,7 @@ void tally_rf_process(uint8_t c)
 void tally_process(uint8_t c)
 {
     static uint8_t mode=0;
-    static uint8_t buffer[6];
+    static uint8_t buffer[10];
     static uint8_t index=0;
 
     switch(mode)
@@ -198,123 +196,140 @@ void tally_process(uint8_t c)
         case 1:
             buffer[index] = c;
             index++;
-            if(index > 5)
+            if(index > 6)
             {
-                if(buffer[5]==0xAA)
+                if(buffer[6]==0xAA)
                 {
-                    cams[0].tally = buffer[0];
+                    cams[0].tally = buffer[0]; //0: off, 1: pgm, 2: prev
                     cams[1].tally = buffer[1];
                     cams[2].tally = buffer[2];
                     cams[3].tally = buffer[3];
-
-                    cam5_tally = buffer[4];
+                    cams[4].tally = buffer[4];
+                    cams[5].tally = buffer[5];            
                     tally_update();
+                }
+                else
+                {
+                    uart2_puts("fail\n");
                 }
                 mode = 0;
             }
-
-
+            break;
     }
-
-
 }
 
 
 void tally_update(void)
 {
-    if(tally_mode == tally_auto)
+    for(uint8_t i=0; i < CAM_COUNT; i++)
     {
-        if(cam5_tally == 1 ) //program
+        if(cams[i].tally_id != 0)
         {
-            tally_setColor(red);
+
+            if(cams[i].tally_mode == tally_auto)
+            {
+                if(cams[i].tally == 1 ) //program
+                {
+                    tally_setColor(cams[i].tally_id, red);
+                }
+                else if(cams[i].tally == 2) //preview
+                {
+                    tally_setColor(cams[i].tally_id, green);
+                }
+                else 
+                {
+                    tally_setColor(cams[i].tally_id, off);
+                }
+            }
+            else if(cams[i].tally_mode == tally_blue)
+            {
+                tally_setColor(cams[i].tally_id, blue);
+            }
+            else if(cams[i].tally_mode == tally_yellow)
+            {
+                tally_setColor(cams[i].tally_id, yellow);
+            }
         }
-        else if(cam5_tally == 2) //preview
-        {
-            tally_setColor(green);
-        }
-        else 
-        {
-            tally_setColor(off);
-        }
+
     }
-    else if(tally_mode == tally_blue)
-    {
-        tally_setColor(blue);
-    }
-    else if(tally_mode == tally_yellow)
-    {
-        tally_setColor(yellow);
-    }
+
+
 }
 
 
-void tally_setColor(tally_color_t color)
+void tally_setColor(uint8_t id, tally_color_t color)
 {
     switch(color)
     {
         case off: 
             TALLY_PORT &= ~(1<<TALLY_RED);
             TALLY_PORT &= ~(1<<TALLY_GREEN);
-            tally_sendRGB(0x0,0x0,0x0);
+            tally_sendRGB(id, 0x0,0x0,0x0);
         break;
         case red: 
             TALLY_PORT |= (1<<TALLY_RED);
             TALLY_PORT &= ~(1<<TALLY_GREEN);  
-            tally_sendRGB(0xFF,0x0,0x0);
+            tally_sendRGB(id, 0xFF,0x0,0x0);
         break;
         case green: 
             TALLY_PORT |= (1<<TALLY_GREEN);
             TALLY_PORT &= ~(1<<TALLY_RED);  
-            tally_sendRGB(0x0,0xFF,0x0);
+            tally_sendRGB(id, 0x0,0xFF,0x0);
         break;
         case yellow: 
             TALLY_PORT &= ~(1<<TALLY_RED);
             TALLY_PORT &= ~(1<<TALLY_GREEN);
-            tally_sendRGB(0xFF,0xFF,0x0);
+            tally_sendRGB(id, 0xFF,0xFF,0x0);
         break;
         case blue: 
             TALLY_PORT &= ~(1<<TALLY_RED);
             TALLY_PORT &= ~(1<<TALLY_GREEN);
-            tally_sendRGB(0x0,0x0,0xFF);
+            tally_sendRGB(id, 0x0,0x0,0xFF);
         break;
     }
 }
 
 
-void tally_setAuto()
+void tally_setAuto(void)
 {
-    tally_mode = tally_auto;
+    cams[active_cam].tally_mode = tally_auto;
     tally_update();
 }
 
-void tally_setYellow()
+void tally_setYellow(void)
 {
-    tally_mode = tally_yellow;
+    cams[active_cam].tally_mode = tally_yellow;
     tally_update();
 }
 
-void tally_setBlue()
+void tally_setBlue(void)
 {
-    tally_mode = tally_blue;
+    cams[active_cam].tally_mode = tally_blue;
     tally_update();
 }
 
 
-tally_mode_t tally_getMode()
-{
-    return tally_mode;
-}
+//tally_mode_t tally_getMode()
+//{
+//    return tally_mode;
+//}
 
 
-void tally_sendRGB(uint8_t r, uint8_t g, uint8_t b)
+void tally_sendRGB(uint8_t id, uint8_t r, uint8_t g, uint8_t b)
 {
     //  [STX]NExxxyyyzzz[ETX]
     tally_rf_status = rf_wait;
     uart1_putc(2); //STX
     uart1_putc('N');
     uart1_putc('E');
+    uart1_putc(' ');
     
     char t;
+    t = '0' + id % 100 / 10;
+    uart1_putc(t);
+    t = '0' + id % 10;
+    uart1_putc(t);
+    uart1_putc(' ');
 
     t = '0' + r/100;
     uart1_putc(t);

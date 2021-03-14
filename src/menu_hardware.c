@@ -3,6 +3,7 @@
 #include "adc.h"
 #include "hardware.h"
 #include <util/delay.h>
+#include <stdio.h>
 
 void show_hardware_info(void)
 {

@@ -105,6 +105,13 @@ const __flash cam_setup_parameters_t cam_setup_parameters[] =
 		.offset = offsetof(cam_data_t, lockMove),
 		.min = 0,
 		.max = 1
+	},
+	{
+		.name = "Tally receiver ID   ",
+		.type = type_uint8,
+		.offset = offsetof(cam_data_t, tally_id),
+		.min = 0,
+		.max = 255
 	}
 };
 
